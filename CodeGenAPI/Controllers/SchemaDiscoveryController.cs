@@ -28,7 +28,7 @@ namespace CodeGenAPI.Controllers
     {
         [Route("api/[controller]")]
         [ApiController]
-        [ApiKeyAuthorize]
+        //[ApiKeyAuthorize]
         [EnableCors("DefaultPolicy")]
         public class SchemaDiscoveryController : ControllerBase
         {
