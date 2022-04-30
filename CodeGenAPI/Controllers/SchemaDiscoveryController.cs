@@ -40,10 +40,12 @@ namespace CodeGenAPI.Controllers
 
         [HttpGet]
         [Route("GetAll")]
-        public string GetAll(string CN = "Data Source=localhost; Initial Catalog=OPENCUDmDB; User ID=sa; Password=P@ssw0rd")
+        public string GetAll(string CN = "DBwSSPI_Login")
         {
             // On big databases this will likely cause timeouts and other squirrly behaiviors for tool like the CrapTacular SWAGGER
             string result = "RESULT";
+
+            CN = FetchActualConnectionString(CN);
 
             SqlConnection cn = new SqlConnection(CN);
 
@@ -78,11 +80,14 @@ namespace CodeGenAPI.Controllers
         [HttpGet]
         [Route("GetTables")]
         public string GetTables(
-            string CN = "Data Source=localhost; Initial Catalog=OPENCUDmDB; User ID=sa; Password=P@ssw0rd")
+            string CN = "DBwSSPI_Login")
         {
             string result = "RESULT";
 
+            CN = FetchActualConnectionString(CN);
+
             SqlConnection cn = new SqlConnection(CN);
+
 
             cn.Open();
 
@@ -109,11 +114,14 @@ namespace CodeGenAPI.Controllers
         [HttpGet]
         [Route("GetListOfTables")]
         public IEnumerable<string> GetListOfTables(
-            string CN = "Data Source=localhost; Initial Catalog=OPENCUDmDB; User ID=sa; Password=P@ssw0rd")
+            string CN = "DBwSSPI_Login")
         {
             List<string> result = new List<string>();
 
+            CN = FetchActualConnectionString(CN);
+
             SqlConnection cn = new SqlConnection(CN);
+
 
             cn.Open();
 
@@ -141,12 +149,15 @@ namespace CodeGenAPI.Controllers
         [HttpGet]
         [Route("GetTableSchema")]
         public string GetTableSchema(
-            string CN = "Data Source=localhost; Initial Catalog=OPENCUDmDB; User ID=sa; Password=P@ssw0rd",
+            string CN = "DBwSSPI_Login",
             string TN = "MemberMain")
         {
             string result = "RESULT";
 
+            CN = FetchActualConnectionString(CN);
+
             SqlConnection cn = new SqlConnection(CN);
+
 
             cn.Open();
 
@@ -182,13 +193,15 @@ namespace CodeGenAPI.Controllers
         [HttpGet]
         [Route("GetTableSchemaFields")]
         public IEnumerable<CodeGenAPI.Models.Field> GetTableSchemaFields(
-            string CN = "Data Source=localhost; Initial Catalog=OPENCUDmDB; User ID=sa; Password=P@ssw0rd",
+            string CN = "DBwSSPI_Login",
             string TN = "MemberMain")
         {
             List<CodeGenAPI.Models.Field> result = new List<Field>();
 
             try
             {
+                CN = FetchActualConnectionString(CN);
+
                 SqlConnection cn = new SqlConnection(CN);
 
                 cn.Open();
@@ -300,10 +313,12 @@ namespace CodeGenAPI.Controllers
         [HttpGet]
         [Route("GetTableModel")]
         public string GetTableModel(
-            string CN = "Data Source=localhost; Initial Catalog=OPENCUDmDB; User ID=sa; Password=P@ssw0rd",
+            string CN = "DBwSSPI_Login",
             string TN = "MemberMain")
         {
             string result = "";
+
+            CN = FetchActualConnectionString(CN);
 
             try
             {
@@ -847,10 +862,12 @@ namespace CodeGenAPI.Controllers
         [HttpGet]
         [Route("GetTableColumns")]
         public IEnumerable<String> GetTableColumns(
-            string CN = "Data Source=localhost; Initial Catalog=OPENCUDmDB; User ID=sa; Password=P@ssw0rd",
+            string CN = "DBwSSPI_Login",
             string TN = "MemberMain")
         {
             List<String> result = new List<String>();
+
+            CN = FetchActualConnectionString(CN);
 
             SqlConnection cn = new SqlConnection(CN);
 
@@ -876,6 +893,7 @@ namespace CodeGenAPI.Controllers
 
             return result;
         }
+        
         [HttpGet]
         [Route("GetConfiguration")]
         public string GetConfiguration ()
@@ -896,6 +914,25 @@ namespace CodeGenAPI.Controllers
         }
 
         #region Private Stuff
+
+        private string FetchActualConnectionString(string TheKey)
+        {
+            string result = "";
+            var _config = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
+
+            var things = _config.GetSection("Settings:Databases").GetChildren();
+
+            foreach (var i in things)
+            {
+                if (i.Key.ToLower() == TheKey.ToLower())
+                {
+                    result = i.Value;
+                    break;
+                }
+            }
+
+            return result.ToString();
+        }
 
         private string DoTheIndentation(string code)
         {
