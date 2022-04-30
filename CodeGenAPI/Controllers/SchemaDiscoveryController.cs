@@ -24,6 +24,7 @@ namespace CodeGenAPI.Controllers
     using Swashbuckle.AspNetCore.SwaggerGen;
     using System.Text;
     using System.Configuration;
+    using System.Data;
 
     [Route("api/[controller]")]
     [ApiController]
@@ -911,6 +912,41 @@ namespace CodeGenAPI.Controllers
             return result.ToString();
 
 
+        }
+
+        [HttpGet]
+        [Route("GetSchemaOfSQLCode")]
+        public string GetSchemaOfSQLCode(string CN = "DBwSSPI_Login",string SQLCode = "Select top 1 * from SOMETABLE")
+        {
+            string result = "";
+
+            CN = FetchActualConnectionString(CN);
+
+            SqlConnection cn = new SqlConnection(CN);
+
+            SqlCommand cmd = new SqlCommand(SQLCode, cn);
+
+            SqlDataAdapter ad = new SqlDataAdapter(cmd);
+
+            DataSet ds = new DataSet();
+            ad.FillSchema(ds, SchemaType.Mapped);
+
+            var metadata = ds.Tables[0];
+
+            foreach(DataColumn col in metadata.Columns)
+            {
+                result += col.ColumnName + " - " + col.DataType + " - " + col.AllowDBNull.ToString() + " - " + col.AutoIncrement + "\n";
+            }
+
+            ds.Dispose();
+            ad.Dispose();
+            cmd.Dispose();
+            cn.Close();
+            cn.Dispose();
+
+
+
+            return result;
         }
 
         #region Private Stuff
