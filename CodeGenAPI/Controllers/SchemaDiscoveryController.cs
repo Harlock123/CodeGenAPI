@@ -915,6 +915,103 @@ namespace CodeGenAPI.Controllers
         }
 
         [HttpGet]
+        [Route("GetSchemaFieldsFromSQLCode")]
+        public IEnumerable<CodeGenAPI.Models.Field> GetSchemaFieldsFromSQLCode (
+            string CN = "DBwSSPI_Login", string SQLCode = "Select top 1 * from SOMETABLE")
+        {
+            List<CodeGenAPI.Models.Field> result = new List<CodeGenAPI.Models.Field>();
+
+            CN = FetchActualConnectionString(CN);
+
+            SqlConnection cn = new SqlConnection(CN);
+
+            SqlCommand cmd = new SqlCommand(SQLCode, cn);
+
+            SqlDataAdapter ad = new SqlDataAdapter(cmd);
+
+            DataSet ds = new DataSet();
+            ad.FillSchema(ds, SchemaType.Mapped);
+
+            var metadata = ds.Tables[0];
+
+            foreach (DataColumn col in metadata.Columns)
+            {
+                Field f = new Field();
+
+                f.AllowNulls = col.AllowDBNull;
+                f.FieldName = col.ColumnName;
+                f.FieldType = col.DataType.ToString();
+                f.IsIdentity = col.AutoIncrement;
+                f.MaxLength = col.MaxLength;
+                f.Precision = 0;
+                
+                result.Add(f); 
+
+
+            }
+
+            ds.Dispose();
+            ad.Dispose();
+            cmd.Dispose();
+            cn.Close();
+            cn.Dispose();
+
+            return result;
+        }
+
+        [HttpGet]
+        [Route("GetInterfaceClassFromSQLCode")]
+        public string GetInterfaceClassFromSQLCode(
+            string CN = "DBwSSPI_Login", string SQLCode = "Select top 1 * from SOMETABLE", string ClassName = "MyAwesomeObject")
+        {
+            string result = "public class " + ClassName + "\n" + "{\n";
+
+            string TheTabs = "\t";
+            
+            List<CodeGenAPI.Models.Field> TheFields = 
+                (List<CodeGenAPI.Models.Field>)GetSchemaFieldsFromSQLCode(CN, SQLCode);
+
+            foreach(CodeGenAPI.Models.Field theField in TheFields)
+            {
+                result += TheTabs + theField.FieldType + " " + theField.FieldName + " { get; set; }\n";
+
+            }
+
+            result += "}\n";
+            
+
+            return result;
+        }
+
+        [HttpGet]
+        [Route("GetGetterWebMethodFromSQLCode")]
+        public string GetGetterWebMethodFromSQLCode(
+            string CN = "DBwSSPI_Login", string SQLCode = "Select top 1 * from SOMETABLE", string ClassName = "MyAwesomeObject", string FilterFieldName = "SomeFieldName")
+        {
+            string result = GetInterfaceClassFromSQLCode(CN, SQLCode, ClassName);
+
+            string TheTabs = "\t";
+
+            List<CodeGenAPI.Models.Field> TheFields =
+                (List<CodeGenAPI.Models.Field>)GetSchemaFieldsFromSQLCode(CN, SQLCode);
+
+            foreach (CodeGenAPI.Models.Field theField in TheFields)
+            {
+                result += TheTabs + theField.FieldType + " " + theField.FieldName + " { get; set; }\n";
+
+            }
+
+            result += "}\n";
+
+
+            return result;
+        }
+
+
+
+
+
+        [HttpGet]
         [Route("GetSchemaOfSQLCode")]
         public string GetSchemaOfSQLCode(string CN = "DBwSSPI_Login",string SQLCode = "Select top 1 * from SOMETABLE")
         {
@@ -1415,6 +1512,12 @@ namespace CodeGenAPI.Controllers
             }
             return s;
         }
+
+        #endregion
+
+        #region InterfaceClasses
+
+        
 
         #endregion
     }
