@@ -989,19 +989,55 @@ namespace CodeGenAPI.Controllers
             string CN = "DBwSSPI_Login", string SQLCode = "Select top 1 * from SOMETABLE", string ClassName = "MyAwesomeObject", string FilterFieldName = "SomeFieldName")
         {
             string result = GetInterfaceClassFromSQLCode(CN, SQLCode, ClassName);
-
-            string TheTabs = "\t";
-
+                                    
             List<CodeGenAPI.Models.Field> TheFields =
                 (List<CodeGenAPI.Models.Field>)GetSchemaFieldsFromSQLCode(CN, SQLCode);
 
-            foreach (CodeGenAPI.Models.Field theField in TheFields)
-            {
-                result += TheTabs + theField.FieldType + " " + theField.FieldName + " { get; set; }\n";
+            //foreach (CodeGenAPI.Models.Field theField in TheFields)
+            //{
+            //    result += TheTabs + theField.FieldType + " " + theField.FieldName + " { get; set; }\n";
 
+            //}
+
+            result += "}\n\n\n";
+
+            result += "[HttpGet]\n";
+            result += "[Route(\"GetListOf" + ClassName + "\"]\n";
+            result += "{\n";
+            result += Tabify(1) + "List<" + ClassName + "> result = new List<" + ClassName + ">();\n";
+            result += Tabify(1) + "using (SqlConnection cn = new SqlConnection(\"" + FetchActualConnectionString(CN) + "\");\n";
+            result += Tabify(1) + "{\n";
+            
+            result += Tabify(2) + "try\n";
+            result += Tabify(2) + "{\n";
+
+            result += Tabify(3) + "cn.Open();\n";
+            result += Tabify(3) + "var Sql = " + Stringify(SQLCode, 3);
+            result += Tabify(3) + "using (SqlCommand cmd = new SqlCommand(Sql,cn);\n";
+            result += Tabify(3) + "{\n";
+
+            result += Tabify(4) + "cmd.CommandTimeout = 500;\n";
+            result += Tabify(4) + "SqlDataReader r = cmd.ExecuteReader();\n";
+            result += Tabify(4) + "while (r.Read())\n";
+            result += Tabify(4) + "{\n";
+
+            result += Tabify(5) + ClassName + "c = new " + ClassName + "();\n";
+
+            foreach(Field f in TheFields)
+            {
+                if (f.FieldType.ToLower().EndsWith("string"))
+                    result += Tabify(5) + "c." + f.FieldName + " = r[\"" + f.FieldName + "\"] + \"\";\n";
             }
 
-            result += "}\n";
+            result += Tabify(5) + "result.add(c);\n";
+
+            result += Tabify(5) + "}\n";
+
+            result += Tabify(4) + "}\n";
+
+            result += Tabify(3) + "}\n";
+
+
 
 
             return result;
@@ -1513,11 +1549,49 @@ namespace CodeGenAPI.Controllers
             return s;
         }
 
+        private string Tabify(int numtabs)
+        {
+            string result = "";
+
+            for (int i= 0; i < numtabs; i++)
+            {
+                result += "\t";
+
+            }
+
+            return result;
+        }
+
+        private string Stringify(string TheString, int tcount)
+        {
+            string[] arr = TheString.Split("\n\r".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+
+            StringBuilder s = new StringBuilder();
+
+            //s.Append(Tabify(tcount) + "var thestring = \"\";\n");
+
+            bool first = true;
+
+            foreach (string ss in arr)
+            {
+                if (first)
+                    s.Append("\"" + ss + "\" + \n");
+                else
+                    s.Append(Tabify(tcount) + "\"" + ss + "\" + \n");
+
+            }
+
+            s.Append(Tabify(tcount) + "\"\";\n");
+
+            return s.ToString();
+            
+        }
+
         #endregion
 
         #region InterfaceClasses
 
-        
+
 
         #endregion
     }
