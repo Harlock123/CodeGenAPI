@@ -927,6 +927,8 @@ namespace CodeGenAPI.Controllers
 
             SqlCommand cmd = new SqlCommand(SQLCode, cn);
 
+            //cmd.Parameters.Add("@ID",SqlDbType.)
+
             SqlDataAdapter ad = new SqlDataAdapter(cmd);
 
             DataSet ds = new DataSet();
@@ -986,12 +988,47 @@ namespace CodeGenAPI.Controllers
         [HttpGet]
         [Route("GetGetterWebMethodFromSQLCode")]
         public string GetGetterWebMethodFromSQLCode(
-            string CN = "DBwSSPI_Login", string SQLCode = "Select top 1 * from SOMETABLE", string ClassName = "MyAwesomeObject", string FilterFieldName = "SomeFieldName")
+            string CN = "DBwSSPI_Login", string SQLCode = "Select top 1 * from SOMETABLE", 
+            string ClassName = "MyAwesomeObject", string FilterFieldName = "SomeFieldName")
+           
         {
             string result = GetInterfaceClassFromSQLCode(CN, SQLCode, ClassName);
                                     
             List<CodeGenAPI.Models.Field> TheFields =
                 (List<CodeGenAPI.Models.Field>)GetSchemaFieldsFromSQLCode(CN, SQLCode);
+
+            var filterfieldtype = "string";
+            var sqlfiltertype = "SqlDbType.VarChar";
+
+            foreach (Field f in TheFields)
+            {
+                if (FilterFieldName.ToLower().Trim() == f.FieldName.ToLower()) 
+                {
+                    if (f.FieldType.ToLower().EndsWith("int32"))
+                    {
+                        filterfieldtype = "Int32";
+                        sqlfiltertype = "SqlDbType.Int";
+                    }
+
+                    if (f.FieldType.ToLower().EndsWith("decimal"))
+                    {
+                        filterfieldtype = "Double";
+                        sqlfiltertype = "SqlDbType.Float";
+                    }
+
+                    if (f.FieldType.ToLower().EndsWith("boolean"))
+                    {
+                        filterfieldtype = "Boolean";
+                        sqlfiltertype = "SqlDbType.Bit";
+                    }
+
+                    if (f.FieldType.ToLower().EndsWith("datetime"))
+                    {
+                        filterfieldtype = "DateTime"; 
+                        sqlfiltertype = "SqlDbType.DateTime";
+                    }
+                }
+            }
 
             //foreach (CodeGenAPI.Models.Field theField in TheFields)
             //{
@@ -1003,7 +1040,7 @@ namespace CodeGenAPI.Controllers
 
             result += "[HttpGet]\n";
             result += "[Route(\"GetListOf" + ClassName + "\")]\n";
-            result += "public List<" + ClassName + "> GetListOf" + ClassName + " ()\n";
+            result += "public List<" + ClassName + "> GetListOf" + ClassName + " (" + filterfieldtype + " filt " + ")\n";
             result += "{\n";
             result += Tabify(1) + "List<" + ClassName + "> result = new List<" + ClassName + ">();\n";
             result += Tabify(1) + "using (SqlConnection cn = new SqlConnection(\"" + FetchActualConnectionString(CN) + "\"))\n";
@@ -1014,8 +1051,11 @@ namespace CodeGenAPI.Controllers
 
             result += Tabify(3) + "cn.Open();\n";
             result += Tabify(3) + "var Sql = " + Stringify(SQLCode, 3);
+            result += Tabify(3) + "Sql += \" where " + FilterFieldName + " = @filt\";\n";
             result += Tabify(3) + "using (SqlCommand cmd = new SqlCommand(Sql,cn))\n";
             result += Tabify(3) + "{\n";
+
+            result += Tabify(4) + "cmd.Parameters.Add( \"@filt\"," + sqlfiltertype + ").Value = filt;\n";
 
             result += Tabify(4) + "cmd.CommandTimeout = 500;\n";
             result += Tabify(4) + "SqlDataReader r = cmd.ExecuteReader();\n";
@@ -1671,6 +1711,7 @@ namespace CodeGenAPI.Controllers
 
         #region InterfaceClasses
 
+        
 
         #endregion
     }
