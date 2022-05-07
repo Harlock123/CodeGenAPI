@@ -319,7 +319,7 @@ namespace CodeGenAPI.Controllers
         {
             string result = "";
 
-            CN = FetchActualConnectionString(CN);
+            //CN = FetchActualConnectionString(CN);
 
             try
             {
@@ -973,7 +973,7 @@ namespace CodeGenAPI.Controllers
 
             foreach(CodeGenAPI.Models.Field theField in TheFields)
             {
-                result += TheTabs + theField.FieldType + " " + theField.FieldName + " { get; set; }\n";
+                result += TheTabs + "public " + theField.FieldType + " " + theField.FieldName + " { get; set; }\n";
 
             }
 
@@ -999,13 +999,14 @@ namespace CodeGenAPI.Controllers
 
             //}
 
-            result += "}\n\n\n";
+            result += "\n\n\n";
 
             result += "[HttpGet]\n";
-            result += "[Route(\"GetListOf" + ClassName + "\"]\n";
+            result += "[Route(\"GetListOf" + ClassName + "\")]\n";
+            result += "public List<" + ClassName + "> GetListOf" + ClassName + " ()\n";
             result += "{\n";
             result += Tabify(1) + "List<" + ClassName + "> result = new List<" + ClassName + ">();\n";
-            result += Tabify(1) + "using (SqlConnection cn = new SqlConnection(\"" + FetchActualConnectionString(CN) + "\");\n";
+            result += Tabify(1) + "using (SqlConnection cn = new SqlConnection(\"" + FetchActualConnectionString(CN) + "\"))\n";
             result += Tabify(1) + "{\n";
             
             result += Tabify(2) + "try\n";
@@ -1013,7 +1014,7 @@ namespace CodeGenAPI.Controllers
 
             result += Tabify(3) + "cn.Open();\n";
             result += Tabify(3) + "var Sql = " + Stringify(SQLCode, 3);
-            result += Tabify(3) + "using (SqlCommand cmd = new SqlCommand(Sql,cn);\n";
+            result += Tabify(3) + "using (SqlCommand cmd = new SqlCommand(Sql,cn))\n";
             result += Tabify(3) + "{\n";
 
             result += Tabify(4) + "cmd.CommandTimeout = 500;\n";
@@ -1021,31 +1022,109 @@ namespace CodeGenAPI.Controllers
             result += Tabify(4) + "while (r.Read())\n";
             result += Tabify(4) + "{\n";
 
-            result += Tabify(5) + ClassName + "c = new " + ClassName + "();\n";
+            result += Tabify(5) + ClassName + " c = new " + ClassName + "();\n";
 
             foreach(Field f in TheFields)
             {
                 if (f.FieldType.ToLower().EndsWith("string"))
                     result += Tabify(5) + "c." + f.FieldName + " = r[\"" + f.FieldName + "\"] + \"\";\n";
+
+                if (f.FieldType.ToLower().EndsWith("boolean"))
+                {
+                    if (f.AllowNulls)
+                    {
+                        result += Tabify(5) + "if (!Convert.IsDBNull(r[\"" + f.FieldName + "\"]))\n";
+                        result += Tabify(5) + "{\n";
+                        result += Tabify(6) + "c." + f.FieldName + " = Convert.ToBoolean(r[\"" + f.FieldName + "\"]);\n";
+                        result += Tabify(5) + "}\n";
+                    }
+                    else
+                    {
+
+                        result += Tabify(5) + "c." + f.FieldName + " = Convert.ToBoolean(r[\"" + f.FieldName + "\"]);\n";
+
+                    }
+                }
+
+                if (f.FieldType.ToLower().EndsWith("int32"))
+                {
+                    if (f.AllowNulls)
+                    {
+                        result += Tabify(5) + "if (!Convert.IsDBNull(r[\"" + f.FieldName + "\"]))\n";
+                        result += Tabify(5) + "{\n";
+                        result += Tabify(6) + "c." + f.FieldName + " = Convert.ToInt32(r[\"" + f.FieldName + "\"]);\n";
+                        result += Tabify(5) + "}\n";
+                    }
+                    else
+                    {
+
+                        result += Tabify(5) + "c." + f.FieldName + " = Convert.ToInt32(r[\"" + f.FieldName + "\"]);\n";
+
+                    }
+                }
+
+                if (f.FieldType.ToLower().EndsWith("datetime"))
+                {
+                    if (f.AllowNulls)
+                    {
+                        result += Tabify(5) + "if (!Convert.IsDBNull(r[\"" + f.FieldName + "\"]))\n";
+                        result += Tabify(5) + "{\n";
+                        result += Tabify(6) + "c." + f.FieldName + " = Convert.ToDateTime(r[\"" + f.FieldName + "\"]);\n";
+                        result += Tabify(5) + "}\n";
+                    }
+                    else
+                    {
+
+                        result += Tabify(5) + "c." + f.FieldName + " = Convert.ToDateTime(r[\"" + f.FieldName + "\"]);\n";
+
+                    }
+                }
+
+                if (f.FieldType.ToLower().EndsWith("decimal"))
+                {
+                    if (f.AllowNulls)
+                    {
+                        result += Tabify(5) + "if (!Convert.IsDBNull(r[\"" + f.FieldName + "\"]))\n";
+                        result += Tabify(5) + "{\n";
+                        result += Tabify(6) + "c." + f.FieldName + " = Convert.ToDecimal(r[\"" + f.FieldName + "\"]);\n";
+                        result += Tabify(5) + "}\n";
+                    }
+                    else
+                    {
+
+                        result += Tabify(5) + "c." + f.FieldName + " = Convert.ToDecimal(r[\"" + f.FieldName + "\"]);\n";
+
+                    }
+                }
+
+
             }
 
-            result += Tabify(5) + "result.add(c);\n";
+            result += Tabify(5) + "result.Add(c);\n";
 
-            result += Tabify(5) + "}\n";
+            result += Tabify(4) + "} // End of While() \n";
 
-            result += Tabify(4) + "}\n";
+            result += Tabify(3) + "cmd.Dispose();\n";
 
-            result += Tabify(3) + "}\n";
+            result += Tabify(3) + "} // End of Using (SqlCommand \n";
 
+            result += Tabify(2) + "} // End of Try\n";
 
+            result += Tabify(2) + "catch (Exception ex)\n";
+            result += Tabify(2) + "{\n";
+            result += Tabify(3) + "Console.WriteLine(ex.ToString());\n";
+            result += Tabify(2) + "}\n";
 
+            result += Tabify(2) + "cn.Close();\n";
+
+            result += Tabify(1) + "} // End of Using (SqlConnection \n";
+
+            result += Tabify(1) + "return result;\n";
+
+            result += "} // End of GETTER\n";
 
             return result;
         }
-
-
-
-
 
         [HttpGet]
         [Route("GetSchemaOfSQLCode")]
@@ -1081,6 +1160,7 @@ namespace CodeGenAPI.Controllers
 
             return result;
         }
+
 
         #region Private Stuff
 
@@ -1590,7 +1670,6 @@ namespace CodeGenAPI.Controllers
         #endregion
 
         #region InterfaceClasses
-
 
 
         #endregion
