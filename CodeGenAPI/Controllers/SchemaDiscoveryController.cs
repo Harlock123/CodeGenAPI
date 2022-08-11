@@ -975,14 +975,36 @@ namespace CodeGenAPI.Controllers
 
             foreach(CodeGenAPI.Models.Field theField in TheFields)
             {
-                result += TheTabs + "public " + theField.FieldType + " " + theField.FieldName + " { get; set; }\n";
-
+                
+                if (char.IsLetter(theField.FieldName.FirstOrDefault()))
+                    result += TheTabs + "public " + theField.FieldType + " " + theField.FieldName + " { get; set; }\n";
+                else
+                    result += TheTabs + "public " + theField.FieldType + " _" + theField.FieldName + " { get; set; }\n";
             }
 
             result += "}\n";
             
 
             return result;
+        }
+
+        [HttpGet]
+        [Route("GetAllTablesInterfaceClassesFromDataBase")]
+        public string GetAllTablesInterfaceClassesFromDataBase(
+            string CN = "DBwSSPI_Login")
+        {
+            StringBuilder result = new StringBuilder();
+
+            IEnumerable<String> TheTables = GetListOfTables(CN);
+
+            foreach(string TableName in TheTables)
+            {
+                result.Append(GetInterfaceClassFromSQLCode(CN, "SELECT TOP 1 * from [" + TableName + "]", "cls" + TableName));
+                result.Append(System.Environment.NewLine);
+            }
+
+
+            return result.ToString();
         }
 
         [HttpGet]
