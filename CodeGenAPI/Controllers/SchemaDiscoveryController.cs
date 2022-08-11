@@ -1352,6 +1352,57 @@ namespace CodeGenAPI.Controllers
             return result;
         }
 
+        [HttpGet]
+        [Route("GetIdentityFieldForTable")]
+        public string GetIdentityFieldForTable(string CN = "DBwSSPI_Login", string TableName = "SOMETABLE")
+        {
+            string result = "Table has no Identity Field";
+
+            CN = FetchActualConnectionString(CN);
+
+            SqlConnection cn = new SqlConnection(CN);
+
+            string SQLCode = "Select top 1 * from [" + TableName + "]";
+
+
+            SqlCommand cmd = new SqlCommand(SQLCode, cn);
+
+            SqlDataAdapter ad = new SqlDataAdapter(cmd);
+
+            DataSet ds = new DataSet();
+            try { 
+                ad.FillSchema(ds, SchemaType.Mapped);
+                var metadata = ds.Tables[0];
+
+                foreach (DataColumn col in metadata.Columns)
+                {
+                    if (col.AutoIncrement)
+                    {
+                        result = col.ColumnName;
+                        break;
+                    }
+
+                    //result += col.ColumnName + " - " + col.DataType + " - " + col.AllowDBNull.ToString() + " - " + col.AutoIncrement + "\n";
+                }
+            }
+            catch
+            {
+                result = "Table Likely does not exist";
+            }
+            
+            
+
+            ds.Dispose();
+            ad.Dispose();
+            cmd.Dispose();
+            cn.Close();
+            cn.Dispose();
+
+
+
+            return result;
+        }
+
 
         #region Private Stuff
 
