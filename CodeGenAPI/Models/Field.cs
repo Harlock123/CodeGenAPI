@@ -15,6 +15,7 @@ namespace CodeGenAPI.Models
         public string CROSSWALKTABLE { get; set; } = "";
         public string CROSSWALKVALUE { get; set; } = "";
         public string CROSSWALKDISPLAY { get; set; } = "";
+        public string TABLENAME { get; set; } = "";
 
         public Field()
         {
@@ -35,9 +36,10 @@ namespace CodeGenAPI.Models
             CROSSWALKTABLE = "";
             CROSSWALKVALUE = "";
             CROSSWALKDISPLAY = "";
+            TABLENAME = "";
         }
 
-        public Field(string fname, string ftype, int maxlen, bool nulls, bool identity, int precision, int scale, bool crw, string crt, string crv, string crd)
+        public Field(string fname, string ftype, int maxlen, bool nulls, bool identity, int precision, int scale, bool crw, string crt, string crv, string crd, string tname )
         {
             FieldName = fname;
             FieldNameConverted = fname.Replace(" ", "_");
@@ -51,6 +53,7 @@ namespace CodeGenAPI.Models
             CROSSWALKTABLE = crt;
             CROSSWALKVALUE = crv;
             CROSSWALKDISPLAY = crd;
+            TABLENAME = tname;
         }
 
     }

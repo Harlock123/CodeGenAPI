@@ -287,6 +287,8 @@ namespace CodeGenAPI.Controllers
                     else
                         f.MaxLength = r.GetInt32(r.GetOrdinal("CHARACTER_MAXIMUM_LENGTH"));
 
+                    f.TABLENAME = TN;
+
                     result.Add(f);
 
                 }
