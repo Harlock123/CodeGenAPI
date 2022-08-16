@@ -1405,6 +1405,89 @@ namespace CodeGenAPI.Controllers
             return result;
         }
 
+        [HttpGet]
+        [Route("GetListofTablePKs")]
+        public List<TablesAndPKs> GetListOFTablePKs(string CN = "DBwSSPI_Login")
+        {
+            List<TablesAndPKs> result = new List<TablesAndPKs>();
+
+            var thestring = "";
+            thestring += "select schema_name(tab.schema_id) as [schema_name], ";
+            thestring += "    pk.[name] as pk_name, ";
+            thestring += "    substring(column_names, 1, len(column_names)-1) as [columns], ";
+            thestring += "    tab.[name] as table_name ";
+            thestring += "from sys.tables tab ";
+            thestring += "    inner join sys.indexes pk ";
+            thestring += "        on tab.object_id = pk.object_id ";
+            thestring += "        and pk.is_primary_key = 1 ";
+            thestring += "   cross apply (select col.[name] + ', ' ";
+            thestring += "                    from sys.index_columns ic ";
+            thestring += "                        inner join sys.columns col ";
+            thestring += "                            on ic.object_id = col.object_id ";
+            thestring += "                            and ic.column_id = col.column_id ";
+            thestring += "                    where ic.object_id = tab.object_id ";
+            thestring += "                        and ic.index_id = pk.index_id ";
+            thestring += "                            order by col.column_id ";
+            thestring += "                            for xml path ('') ) D (column_names) ";
+            thestring += "order by schema_name(tab.schema_id), ";
+            thestring += "    pk.[name]";
+
+            CN = FetchActualConnectionString(CN);
+
+            SqlConnection cn = new SqlConnection(CN);
+            cn.Open();
+
+            SqlCommand cmd = new SqlCommand(thestring, cn);
+
+            SqlDataReader r = cmd.ExecuteReader();
+
+            while (r.Read())
+            {
+                TablesAndPKs tp = new TablesAndPKs();
+
+                tp.TableName = r["table_Name"] + "";
+                tp.PKName = r["columns"] + "";
+
+                result.Add(tp);
+            }
+
+            r.Close();
+            cmd.Dispose();
+            cn.Close();
+            cn.Dispose();
+
+            return result;
+        }
+
+        [HttpGet]
+        [Route("GetListOfOtherTableKeys")]
+        public List<OtherTableKeys> GetListOfOtherTableKeys(string CN = "DBwSSPI_Login", string TNAME = "")
+        {
+            List<OtherTableKeys> result = new List<OtherTableKeys>();
+
+            List<string> ColsInTable = (List<string>)GetTableColumns(CN, TNAME);
+            List<TablesAndPKs> tp = GetListOFTablePKs(CN);
+
+            foreach (string col in ColsInTable)
+            {
+                foreach (TablesAndPKs tp2 in tp)
+                {
+                    if(tp2.PKName == col && tp2.TableName.ToLower() != TNAME.ToLower())
+                    {
+                        OtherTableKeys otk = new OtherTableKeys();
+                        otk.TableName = tp2.TableName;
+                        otk.PKName = tp2.PKName;
+
+                        result.Add(otk);
+
+                    }
+                }
+            }
+
+
+            return result;
+        }
+
 
         #region Private Stuff
 
@@ -1918,6 +2001,18 @@ namespace CodeGenAPI.Controllers
         
 
         #endregion
+    }
+
+    public class TablesAndPKs
+    {
+        public string TableName { get; set; } = "";
+        public string PKName { get; set; } = "";
+    }
+
+    public class OtherTableKeys
+    {
+        public string TableName { get; set; } = "";
+        public string PKName { get; set; } = "";
     }
 }
 
