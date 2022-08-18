@@ -991,6 +991,35 @@ namespace CodeGenAPI.Controllers
         }
 
         [HttpGet]
+        [Route("GetInterfaceClassFromSpecificTableName")]
+        public string GetInterfaceClassFromSpecificTableName(
+            string CN = "DBwSSPI_Login", string Tname = "TNAME", string ClassName = "MyAwesomeObject")
+        {
+            string result = "public class " + ClassName + "\n" + "{\n";
+
+            string TheTabs = "\t";
+
+            string SQLCode = "Select top 1 * from " + Tname;
+
+            List<CodeGenAPI.Models.Field> TheFields =
+                (List<CodeGenAPI.Models.Field>)GetSchemaFieldsFromSQLCode(CN, SQLCode);
+
+            foreach (CodeGenAPI.Models.Field theField in TheFields)
+            {
+
+                if (char.IsLetter(theField.FieldName.FirstOrDefault()))
+                    result += TheTabs + "public " + theField.FieldType + " " + theField.FieldName + " { get; set; }\n";
+                else
+                    result += TheTabs + "public " + theField.FieldType + " _" + theField.FieldName + " { get; set; }\n";
+            }
+
+            result += "}\n";
+
+
+            return result;
+        }
+
+        [HttpGet]
         [Route("GetAllTablesInterfaceClassesFromDataBase")]
         public string GetAllTablesInterfaceClassesFromDataBase(
             string CN = "DBwSSPI_Login")
@@ -1318,6 +1347,322 @@ namespace CodeGenAPI.Controllers
             }
             return result;
         }
+
+        [HttpGet]
+        [Route("GetGetterWebMethodFromTableName")]
+        public string GetGetterWebMethodFromTableName(
+            string CN = "DBwSSPI_Login", string TNAME = "TNAME",
+            string ClassName = "MyAwesomeObject", string FilterFieldName = "SomeFieldName", Boolean ReturnSingleton = false, Boolean GenerateInterfaceClass = true)
+
+        {
+            string SQLCode = "Select * from " + TNAME;
+
+            string result = "";
+
+            if (GenerateInterfaceClass)
+                result = GetInterfaceClassFromSQLCode(CN, SQLCode, ClassName);
+
+            List<CodeGenAPI.Models.Field> TheFields =
+                (List<CodeGenAPI.Models.Field>)GetSchemaFieldsFromSQLCode(CN, SQLCode);
+
+            var filterfieldtype = "string";
+            var sqlfiltertype = "SqlDbType.VarChar";
+
+            foreach (Field f in TheFields)
+            {
+                if (FilterFieldName.ToLower().Trim() == f.FieldName.ToLower())
+                {
+                    if (f.FieldType.ToLower().EndsWith("int32"))
+                    {
+                        filterfieldtype = "Int32";
+                        sqlfiltertype = "SqlDbType.Int";
+                    }
+
+                    if (f.FieldType.ToLower().EndsWith("decimal"))
+                    {
+                        filterfieldtype = "Double";
+                        sqlfiltertype = "SqlDbType.Float";
+                    }
+
+                    if (f.FieldType.ToLower().EndsWith("boolean"))
+                    {
+                        filterfieldtype = "Boolean";
+                        sqlfiltertype = "SqlDbType.Bit";
+                    }
+
+                    if (f.FieldType.ToLower().EndsWith("datetime"))
+                    {
+                        filterfieldtype = "DateTime";
+                        sqlfiltertype = "SqlDbType.DateTime";
+                    }
+                }
+            }
+
+            //foreach (CodeGenAPI.Models.Field theField in TheFields)
+            //{
+            //    result += TheTabs + theField.FieldType + " " + theField.FieldName + " { get; set; }\n";
+
+            //}
+
+            result += "\n\n\n";
+
+            if (ReturnSingleton)
+            {
+                result += "[HttpGet]\n";
+                result += "[Route(\"Get" + ClassName + "By" + FilterFieldName + "\")]\n";
+                result += "public " + ClassName + " Get" + ClassName + "By" + FilterFieldName + " (" + filterfieldtype + " filt " + ")\n";
+                result += "{\n";
+                result += Tabify(1) + ClassName + " result = new " + ClassName + "();\n";
+                result += Tabify(1) + "using (SqlConnection cn = new SqlConnection(\"" + FetchActualConnectionString(CN) + "\"))\n";
+                result += Tabify(1) + "{\n";
+
+                result += Tabify(2) + "try\n";
+                result += Tabify(2) + "{\n";
+
+                result += Tabify(3) + "cn.Open();\n";
+                result += Tabify(3) + "var Sql = " + Stringify(SQLCode, 3);
+                result += Tabify(3) + "Sql += \" where " + FilterFieldName + " = @filt\";\n";
+                result += Tabify(3) + "using (SqlCommand cmd = new SqlCommand(Sql,cn))\n";
+                result += Tabify(3) + "{\n";
+
+                result += Tabify(4) + "cmd.Parameters.Add( \"@filt\"," + sqlfiltertype + ").Value = filt;\n";
+
+                result += Tabify(4) + "cmd.CommandTimeout = 500;\n";
+                result += Tabify(4) + "SqlDataReader r = cmd.ExecuteReader();\n";
+                result += Tabify(4) + "while (r.Read())\n";
+                result += Tabify(4) + "{\n";
+
+                result += Tabify(5) + ClassName + " c = new " + ClassName + "();\n";
+
+                foreach (Field f in TheFields)
+                {
+                    if (f.FieldType.ToLower().EndsWith("string"))
+                        result += Tabify(5) + "c." + f.FieldName + " = r[\"" + f.FieldName + "\"] + \"\";\n";
+
+                    if (f.FieldType.ToLower().EndsWith("boolean"))
+                    {
+                        if (f.AllowNulls)
+                        {
+                            result += Tabify(5) + "if (!Convert.IsDBNull(r[\"" + f.FieldName + "\"]))\n";
+                            result += Tabify(5) + "{\n";
+                            result += Tabify(6) + "c." + f.FieldName + " = Convert.ToBoolean(r[\"" + f.FieldName + "\"]);\n";
+                            result += Tabify(5) + "}\n";
+                        }
+                        else
+                        {
+
+                            result += Tabify(5) + "c." + f.FieldName + " = Convert.ToBoolean(r[\"" + f.FieldName + "\"]);\n";
+
+                        }
+                    }
+
+                    if (f.FieldType.ToLower().EndsWith("int32"))
+                    {
+                        if (f.AllowNulls)
+                        {
+                            result += Tabify(5) + "if (!Convert.IsDBNull(r[\"" + f.FieldName + "\"]))\n";
+                            result += Tabify(5) + "{\n";
+                            result += Tabify(6) + "c." + f.FieldName + " = Convert.ToInt32(r[\"" + f.FieldName + "\"]);\n";
+                            result += Tabify(5) + "}\n";
+                        }
+                        else
+                        {
+
+                            result += Tabify(5) + "c." + f.FieldName + " = Convert.ToInt32(r[\"" + f.FieldName + "\"]);\n";
+
+                        }
+                    }
+
+                    if (f.FieldType.ToLower().EndsWith("datetime"))
+                    {
+                        if (f.AllowNulls)
+                        {
+                            result += Tabify(5) + "if (!Convert.IsDBNull(r[\"" + f.FieldName + "\"]))\n";
+                            result += Tabify(5) + "{\n";
+                            result += Tabify(6) + "c." + f.FieldName + " = Convert.ToDateTime(r[\"" + f.FieldName + "\"]);\n";
+                            result += Tabify(5) + "}\n";
+                        }
+                        else
+                        {
+
+                            result += Tabify(5) + "c." + f.FieldName + " = Convert.ToDateTime(r[\"" + f.FieldName + "\"]);\n";
+
+                        }
+                    }
+
+                    if (f.FieldType.ToLower().EndsWith("decimal"))
+                    {
+                        if (f.AllowNulls)
+                        {
+                            result += Tabify(5) + "if (!Convert.IsDBNull(r[\"" + f.FieldName + "\"]))\n";
+                            result += Tabify(5) + "{\n";
+                            result += Tabify(6) + "c." + f.FieldName + " = Convert.ToDecimal(r[\"" + f.FieldName + "\"]);\n";
+                            result += Tabify(5) + "}\n";
+                        }
+                        else
+                        {
+
+                            result += Tabify(5) + "c." + f.FieldName + " = Convert.ToDecimal(r[\"" + f.FieldName + "\"]);\n";
+
+                        }
+                    }
+
+
+                }
+
+                result += Tabify(5) + "result = c;\n";
+
+                result += Tabify(4) + "} // End of While() \n";
+
+                result += Tabify(3) + "cmd.Dispose();\n";
+
+                result += Tabify(3) + "} // End of Using (SqlCommand \n";
+
+                result += Tabify(2) + "} // End of Try\n";
+
+                result += Tabify(2) + "catch (Exception ex)\n";
+                result += Tabify(2) + "{\n";
+                result += Tabify(3) + "Console.WriteLine(ex.ToString());\n";
+                result += Tabify(2) + "}\n";
+
+                result += Tabify(2) + "cn.Close();\n";
+
+                result += Tabify(1) + "} // End of Using (SqlConnection \n";
+
+                result += Tabify(1) + "return result;\n";
+
+                result += "} // End of GETTER\n";
+            }
+            else
+            {
+                result += "[HttpGet]\n";
+                result += "[Route(\"GetListOf" + ClassName + "By" + FilterFieldName + "\")]\n";
+                result += "public List<" + ClassName + "> GetListOf" + ClassName + "By" + FilterFieldName + " (" + filterfieldtype + " filt " + ")\n";
+                result += "{\n";
+                result += Tabify(1) + "List<" + ClassName + "> result = new List<" + ClassName + ">();\n";
+                result += Tabify(1) + "using (SqlConnection cn = new SqlConnection(\"" + FetchActualConnectionString(CN) + "\"))\n";
+                result += Tabify(1) + "{\n";
+
+                result += Tabify(2) + "try\n";
+                result += Tabify(2) + "{\n";
+
+                result += Tabify(3) + "cn.Open();\n";
+                result += Tabify(3) + "var Sql = " + Stringify(SQLCode, 3);
+                result += Tabify(3) + "Sql += \" where " + FilterFieldName + " = @filt\";\n";
+                result += Tabify(3) + "using (SqlCommand cmd = new SqlCommand(Sql,cn))\n";
+                result += Tabify(3) + "{\n";
+
+                result += Tabify(4) + "cmd.Parameters.Add( \"@filt\"," + sqlfiltertype + ").Value = filt;\n";
+
+                result += Tabify(4) + "cmd.CommandTimeout = 500;\n";
+                result += Tabify(4) + "SqlDataReader r = cmd.ExecuteReader();\n";
+                result += Tabify(4) + "while (r.Read())\n";
+                result += Tabify(4) + "{\n";
+
+                result += Tabify(5) + ClassName + " c = new " + ClassName + "();\n";
+
+                foreach (Field f in TheFields)
+                {
+                    if (f.FieldType.ToLower().EndsWith("string"))
+                        result += Tabify(5) + "c." + f.FieldName + " = r[\"" + f.FieldName + "\"] + \"\";\n";
+
+                    if (f.FieldType.ToLower().EndsWith("boolean"))
+                    {
+                        if (f.AllowNulls)
+                        {
+                            result += Tabify(5) + "if (!Convert.IsDBNull(r[\"" + f.FieldName + "\"]))\n";
+                            result += Tabify(5) + "{\n";
+                            result += Tabify(6) + "c." + f.FieldName + " = Convert.ToBoolean(r[\"" + f.FieldName + "\"]);\n";
+                            result += Tabify(5) + "}\n";
+                        }
+                        else
+                        {
+
+                            result += Tabify(5) + "c." + f.FieldName + " = Convert.ToBoolean(r[\"" + f.FieldName + "\"]);\n";
+
+                        }
+                    }
+
+                    if (f.FieldType.ToLower().EndsWith("int32"))
+                    {
+                        if (f.AllowNulls)
+                        {
+                            result += Tabify(5) + "if (!Convert.IsDBNull(r[\"" + f.FieldName + "\"]))\n";
+                            result += Tabify(5) + "{\n";
+                            result += Tabify(6) + "c." + f.FieldName + " = Convert.ToInt32(r[\"" + f.FieldName + "\"]);\n";
+                            result += Tabify(5) + "}\n";
+                        }
+                        else
+                        {
+
+                            result += Tabify(5) + "c." + f.FieldName + " = Convert.ToInt32(r[\"" + f.FieldName + "\"]);\n";
+
+                        }
+                    }
+
+                    if (f.FieldType.ToLower().EndsWith("datetime"))
+                    {
+                        if (f.AllowNulls)
+                        {
+                            result += Tabify(5) + "if (!Convert.IsDBNull(r[\"" + f.FieldName + "\"]))\n";
+                            result += Tabify(5) + "{\n";
+                            result += Tabify(6) + "c." + f.FieldName + " = Convert.ToDateTime(r[\"" + f.FieldName + "\"]);\n";
+                            result += Tabify(5) + "}\n";
+                        }
+                        else
+                        {
+
+                            result += Tabify(5) + "c." + f.FieldName + " = Convert.ToDateTime(r[\"" + f.FieldName + "\"]);\n";
+
+                        }
+                    }
+
+                    if (f.FieldType.ToLower().EndsWith("decimal"))
+                    {
+                        if (f.AllowNulls)
+                        {
+                            result += Tabify(5) + "if (!Convert.IsDBNull(r[\"" + f.FieldName + "\"]))\n";
+                            result += Tabify(5) + "{\n";
+                            result += Tabify(6) + "c." + f.FieldName + " = Convert.ToDecimal(r[\"" + f.FieldName + "\"]);\n";
+                            result += Tabify(5) + "}\n";
+                        }
+                        else
+                        {
+
+                            result += Tabify(5) + "c." + f.FieldName + " = Convert.ToDecimal(r[\"" + f.FieldName + "\"]);\n";
+
+                        }
+                    }
+
+
+                }
+
+                result += Tabify(5) + "result.Add(c);\n";
+
+                result += Tabify(4) + "} // End of While() \n";
+
+                result += Tabify(3) + "cmd.Dispose();\n";
+
+                result += Tabify(3) + "} // End of Using (SqlCommand \n";
+
+                result += Tabify(2) + "} // End of Try\n";
+
+                result += Tabify(2) + "catch (Exception ex)\n";
+                result += Tabify(2) + "{\n";
+                result += Tabify(3) + "Console.WriteLine(ex.ToString());\n";
+                result += Tabify(2) + "}\n";
+
+                result += Tabify(2) + "cn.Close();\n";
+
+                result += Tabify(1) + "} // End of Using (SqlConnection \n";
+
+                result += Tabify(1) + "return result;\n";
+
+                result += "} // End of GETTER\n";
+            }
+            return result;
+        }
+
 
         [HttpGet]
         [Route("GetSchemaOfSQLCode")]
