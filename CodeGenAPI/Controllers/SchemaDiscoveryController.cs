@@ -1833,6 +1833,38 @@ namespace CodeGenAPI.Controllers
             return result;
         }
 
+        [HttpGet]
+        [Route("GetFullGettersForGivenTableName")]
+        public string GetFullGettersForGivenTableName(string CN = "DBwSSPI_Login", string TNAME = "SomeTable")
+        {
+            string result = "";
+
+            List<TablesAndPKs> tpks = GetListOFTablePKs(CN);
+            TablesAndPKs tpk = new TablesAndPKs();
+
+            foreach (TablesAndPKs tp2 in tpks)
+            {
+                if (tp2.TableName.ToLower() == TNAME.ToLower())
+                {
+                    tpk = tp2;
+                    break;
+                }
+            }
+
+
+            List<OtherTableKeys> otks = GetListOfOtherTableKeys(CN, TNAME);
+
+            result = GetGetterWebMethodFromTableName(CN, TNAME, TNAME, tpk.PKName, true, true);
+
+            foreach(OtherTableKeys otk in otks)
+            {
+                result += "\n";
+                result += GetGetterWebMethodFromTableName(CN, TNAME, TNAME, otk.PKName, false, false);
+            }
+
+            return result;
+        }
+
 
         #region Private Stuff
 
