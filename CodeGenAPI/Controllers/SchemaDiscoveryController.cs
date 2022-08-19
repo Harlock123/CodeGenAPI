@@ -25,6 +25,7 @@ namespace CodeGenAPI.Controllers
     using System.Text;
     using System.Configuration;
     using System.Data;
+    using Newtonsoft.Json.Linq;
 
     [Route("api/[controller]")]
     [ApiController]
@@ -1864,6 +1865,30 @@ namespace CodeGenAPI.Controllers
 
             return result;
         }
+
+        [HttpGet]
+        [Route("GetPOSTMethodForTable")]
+        public string GetPOSTMethodForTable(string CN = "DBwSSPI_Login", string TNAME = "SomeTable", Boolean GenerateInterfaceClass = true)
+        {
+            string result = "";
+
+            //Case it to a LIST because its just easier to worth with that rater than a crappy Ienumerable
+            List<Models.Field> TheFields = (List<Models.Field>)GetTableSchemaFields(CN, TNAME);
+
+            if (GenerateInterfaceClass)
+                result = GetInterfaceClassFromSQLCode(CN, "SELECT TOP 1 * from " + TNAME, TNAME) + "\n";
+
+            result += "[HttpPost]\n";
+            result += "[Route(\"Post" + TNAME +"\")]\n";
+            result += "public void Post" + TNAME + "([FromBody] " + TNAME + " value )\n";
+            result +="{\n\n";
+
+
+            result += "}\n\n";
+            
+            return result;
+        }
+
 
 
         #region Private Stuff
