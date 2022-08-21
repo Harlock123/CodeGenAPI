@@ -1872,16 +1872,76 @@ namespace CodeGenAPI.Controllers
         {
             string result = "";
 
-            //Case it to a LIST because its just easier to worth with that rater than a crappy Ienumerable
+            string TheTabs = "";
+
+            //Cast it to a LIST because its just easier to work with that rater than a crappy Ienumerable
             List<Models.Field> TheFields = (List<Models.Field>)GetTableSchemaFields(CN, TNAME);
 
             if (GenerateInterfaceClass)
-                result = GetInterfaceClassFromSQLCode(CN, "SELECT TOP 1 * from " + TNAME, TNAME) + "\n";
+                result = GetInterfaceClassFromSpecificTableName(CN, TNAME, TNAME) + "\n";
 
             result += "[HttpPost]\n";
             result += "[Route(\"Post" + TNAME +"\")]\n";
             result += "public void Post" + TNAME + "([FromBody] " + TNAME + " value )\n";
             result +="{\n\n";
+
+            TheTabs = "\t";
+            result += TheTabs + "string SQL = \"\";\n";
+
+            // Figure out what field is the ID field if any
+            foreach(Models.Field theField in TheFields)
+            {
+                if (theField.IsIdentity)
+                {
+                    // we have an Identity field so we need to make the SQL being built
+                    // aware the ID fields might be already set meaning and UPdate
+                    // otherwise it needs to be crafted as an INSERT INTO.
+
+                    result += TheTabs + "if (value." + theField.FieldName + ">0)\n" +
+                        TheTabs + "{\n";
+
+                    TheTabs = "\t\t";
+
+                    result += TheTabs + "SQL = \"Insert Into [" + TNAME + "] (";
+                    
+                    foreach(Models.Field f1 in TheFields)
+                    {
+                        if (!f1.IsIdentity)
+                        {
+                            result += "[" + f1.FieldName + "],";
+                        }
+                    }
+
+                    // Strip off the Trailing "," character
+
+                    result = result.Substring(0,result.Length - 1);
+
+                    result += ") \" +\n" +
+                        TheTabs + "\"Values (";
+
+                    foreach (Models.Field f1 in TheFields)
+                    {
+                        if (!f1.IsIdentity)
+                        {
+                            result += "@" + f1.FieldName + ",";
+                        }
+                    }
+
+                    // Strip off the Trailing "," character
+
+                    result = result.Substring(0, result.Length - 1);
+
+                    result += ") \"; \n";
+
+
+
+                   
+                    TheTabs = "\t";
+                    result += TheTabs + "}\n";
+                }
+            }
+
+
 
 
             result += "}\n\n";
@@ -1889,7 +1949,7 @@ namespace CodeGenAPI.Controllers
             return result;
         }
 
-
+        
 
         #region Private Stuff
 
