@@ -1361,7 +1361,13 @@ namespace CodeGenAPI.Controllers
             string result = "";
 
             if (GenerateInterfaceClass)
-                result = GetInterfaceClassFromSQLCode(CN, SQLCode, ClassName);
+            {
+                result += "\n//-----------------------------------------------------------------\n";
+                result += "//-------- Interface Class                                    -----\n";
+                result += "//-----------------------------------------------------------------\n\n";
+
+                result += GetInterfaceClassFromSQLCode(CN, SQLCode, ClassName);
+            }
 
             List<CodeGenAPI.Models.Field> TheFields =
                 (List<CodeGenAPI.Models.Field>)GetSchemaFieldsFromSQLCode(CN, SQLCode);
@@ -1405,7 +1411,11 @@ namespace CodeGenAPI.Controllers
 
             //}
 
-            result += "\n\n\n";
+            result += "\n";
+
+            result += "\n//-----------------------------------------------------------------\n";
+            result += "//--------  Getter for Item based on Field Named " + FilterFieldName + "\n";
+            result += "//-----------------------------------------------------------------\n\n";
 
             if (ReturnSingleton)
             {
@@ -1855,12 +1865,11 @@ namespace CodeGenAPI.Controllers
 
             List<OtherTableKeys> otks = GetListOfOtherTableKeys(CN, TNAME);
 
-            result = GetGetterWebMethodFromTableName(CN, TNAME, TNAME, tpk.PKName, true, true);
+            result += GetGetterWebMethodFromTableName(CN, TNAME, TNAME, tpk.PKName, true, true);
 
             foreach(OtherTableKeys otk in otks)
             {
-                result += "\n";
-                result += GetGetterWebMethodFromTableName(CN, TNAME, TNAME, otk.PKName, false, false);
+               result += GetGetterWebMethodFromTableName(CN, TNAME, TNAME, otk.PKName, false, false);
             }
 
             return result;
