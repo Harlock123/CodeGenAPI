@@ -1868,7 +1868,7 @@ namespace CodeGenAPI.Controllers
 
         [HttpGet]
         [Route("GetPOSTMethodForTable")]
-        public string GetPOSTMethodForTable(string CN = "DBwSSPI_Login", string TNAME = "SomeTable", Boolean GenerateInterfaceClass = true)
+        public string GetPOSTMethodForTable(string CN = "DBwSSPI_Login", string TNAME = "SomeTable", Boolean GenerateInterfaceClass = true,Boolean GenerateDBTableModel = true)
         {
             string result = "";
 
@@ -1878,7 +1878,28 @@ namespace CodeGenAPI.Controllers
             List<Models.Field> TheFields = (List<Models.Field>)GetTableSchemaFields(CN, TNAME);
 
             if (GenerateInterfaceClass)
-                result = GetInterfaceClassFromSpecificTableName(CN, TNAME, TNAME) + "\n";
+            {
+                result += "\n//-----------------------------------------------------------------\n";
+                result += "//--------  Interface Class                                   -----\n";
+                result += "//-----------------------------------------------------------------\n\n";
+
+                result += GetInterfaceClassFromSpecificTableName(CN, TNAME, TNAME) + "\n";
+            }
+
+
+            if (GenerateDBTableModel)
+            {
+
+                result += "\n//-----------------------------------------------------------------\n";
+                result += "//--------  Database Class                                    -----\n";
+                result += "//-----------------------------------------------------------------\n\n";
+
+                result += GetTableModelForPost(CN, TNAME, "cls" + TNAME);
+
+            }
+            result += "\n//-----------------------------------------------------------------\n";
+            result += "//--------  POST METHOD                                       -----\n";
+            result += "//-----------------------------------------------------------------\n\n";
 
             result += "[HttpPost]\n";
             result += "[Route(\"Post" + TNAME +"\")]\n";
@@ -1887,71 +1908,577 @@ namespace CodeGenAPI.Controllers
 
             TheTabs = "\t";
             result += TheTabs + "string SQL = \"\";\n";
+            result += TheTabs + "cls" + TNAME + 
+                " Target = new cls" + TNAME + 
+                "(\"" + FetchActualConnectionString(CN) + "\");\n";
 
             // Figure out what field is the ID field if any
-            foreach(Models.Field theField in TheFields)
+            foreach (Models.Field theField in TheFields)
             {
-                if (theField.IsIdentity)
-                {
-                    // we have an Identity field so we need to make the SQL being built
-                    // aware the ID fields might be already set meaning and UPdate
-                    // otherwise it needs to be crafted as an INSERT INTO.
+                // Another Approach
 
-                    result += TheTabs + "if (value." + theField.FieldName + ">0)\n" +
-                        TheTabs + "{\n";
+                result += TheTabs + "Target." + theField.FieldName + " = value." + theField.FieldName + ";\n";
 
-                    TheTabs = "\t\t";
-
-                    result += TheTabs + "SQL = \"Insert Into [" + TNAME + "] (";
-                    
-                    foreach(Models.Field f1 in TheFields)
-                    {
-                        if (!f1.IsIdentity)
-                        {
-                            result += "[" + f1.FieldName + "],";
-                        }
-                    }
-
-                    // Strip off the Trailing "," character
-
-                    result = result.Substring(0,result.Length - 1);
-
-                    result += ") \" +\n" +
-                        TheTabs + "\"Values (";
-
-                    foreach (Models.Field f1 in TheFields)
-                    {
-                        if (!f1.IsIdentity)
-                        {
-                            result += "@" + f1.FieldName + ",";
-                        }
-                    }
-
-                    // Strip off the Trailing "," character
-
-                    result = result.Substring(0, result.Length - 1);
-
-                    result += ") \"; \n";
-
-
-
-                   
-                    TheTabs = "\t";
-                    result += TheTabs + "}\n";
-                }
             }
 
-
-
+            result += TheTabs + "target.Update();\n";
 
             result += "}\n\n";
             
             return result;
         }
 
-        
+
 
         #region Private Stuff
+
+        private string GetTableModelForPost(
+            string CN = "DBwSSPI_Login",
+            string TN = "MemberMain",
+            string CNAME = "clsMemberMain")
+        {
+            string result = "";
+
+            //CN = FetchActualConnectionString(CN);
+
+            try
+            {
+                TheFields = (List<Field>)GetTableSchemaFields(CN, TN);
+                TableName = TN;
+
+                //string IDFIELDTYPE = "";
+                //string IDFIELDNAME = "";
+                //bool AUTONUMBER = false;
+
+                foreach (Field f in TheFields)
+                {
+                    if (f.IsIdentity)
+                    {
+                        IDFIELDTYPE = f.FieldType;
+                        IDFIELDNAME = f.FieldName;
+                        AUTONUMBER = true;
+                        break;
+                    }
+                }
+
+                string s = "";
+
+                s = "using System;\n" +
+                        "using System.ComponentModel;\n" +
+                        "using System.Data;\n" +
+                        "using System.Data.SqlClient;\n\n";
+
+                s += "public partial class " + CNAME + " : INotifyPropertyChanged\n" +
+                    "{\n\n" +
+                    "#region Declarations\n" +
+                    "string _classDatabaseConnectionString = \"\";\n" +
+                    "string _bulkinsertPath = \"\";\n\n" +
+                    "SqlConnection _cn = new SqlConnection();\n" +
+                    "SqlCommand _cmd = new SqlCommand();\n\n" +
+                    "// Backing Variables for Properties\n";
+
+                foreach (Field f in TheFields)
+                {
+                    if (f.FieldType == "VARCHAR" || f.FieldType == "CHAR" || f.FieldType == "NVARCHAR" ||
+                        f.FieldType == "TEXT" || f.FieldType == "UNIQUEIDENTIFIER" || f.FieldType == "GUID" ||
+                        f.FieldType == "SYSNAME")
+                    {
+                        s += "string _" + f.FieldNameConverted + " = \"\";\n";
+                    }
+
+                    if (f.FieldType == "INT" || f.FieldType == "SMALLINT" || f.FieldType == "TINYINT")
+                    {
+                        s += "int _" + f.FieldNameConverted + " = 0;\n";
+                    }
+
+                    if (f.FieldType == "BIGINT")
+                    {
+                        s += "long _" + f.FieldNameConverted + " = 0;\n";
+                    }
+
+                    if (f.FieldType == "DOUBLE" || f.FieldType == "MONEY" || f.FieldType == "CURRENCY" || f.FieldType == "FLOAT")
+                    {
+                        s += "double _" + f.FieldNameConverted + " = 0.0;\n";
+                    }
+
+                    if (f.FieldType == "DECIMAL")
+                    {
+                        s += "double _" + f.FieldNameConverted + " = 0.0;\n";
+                    }
+
+                    if (f.FieldType == "DATETIME" || f.FieldType == "DATE" || f.FieldType == "DATETIME2" || f.FieldType == "SMALLDATE" || f.FieldType == "SMALLDATETIME")
+                    {
+                        s += "DateTime _" + f.FieldNameConverted + " = Convert.ToDateTime(null);\n";
+                    }
+
+                    if (f.FieldType == "BOOL" || f.FieldType == "BIT")
+                    {
+                        s += "bool _" + f.FieldNameConverted + " = false;\n";
+                    }
+                }
+
+
+                s += "\n" +
+                "#endregion\n\n" +
+                "#region Properties\n\n" +
+                "public string classDatabaseConnectionString\n" +
+                "{\n";
+
+                s += "get{return _classDatabaseConnectionString;}\n";
+
+                s += "set{_classDatabaseConnectionString = value;}\n}\n\n";
+
+                s += "public string bulkinsertPath\n{\n";
+
+                s += "get{return _bulkinsertPath;} \n";
+
+                s += "set{_bulkinsertPath = value;} \n}\n\n";
+
+
+                foreach (Field f in TheFields)
+                {
+                    if (f.FieldType == "VARCHAR" || f.FieldType == "CHAR" || f.FieldType == "NVARCHAR" ||
+                        f.FieldType == "TEXT" || f.FieldType == "UNIQUEIDENTIFIER" || f.FieldType == "GUID" ||
+                        f.FieldType == "SYSNAME")
+                    {
+
+                        if (f.MaxLength < 0)
+                        {
+                            s += "public string " + f.FieldNameConverted + "\n{\n" +
+                           "get{ return _" + f.FieldNameConverted + ";}\n" +
+                           "set{ \n" +
+                           "if (value != null && value.Length > " + int.MaxValue.ToString() + ")\n" +
+                           "{ _" + f.FieldNameConverted + " = value.Substring(0," + int.MaxValue.ToString() + ");}\n" +
+                           "else { _" + f.FieldNameConverted + " = value;\n" +
+                           "RaisePropertyChanged(\"" + f.FieldNameConverted + "\");}\n}\n}\n\n";
+                        }
+                        else
+                        {
+                            s += "public string " + f.FieldNameConverted + "\n{\n" +
+                           "get{ return _" + f.FieldNameConverted + ";}\n" +
+                           "set{ \n" +
+                           "if (value != null && value.Length > " + f.MaxLength.ToString() + ")\n" +
+                           "{ _" + f.FieldNameConverted + " = value.Substring(0," + f.MaxLength.ToString() + ");}\n" +
+                           "else { _" + f.FieldNameConverted + " = value;\n" +
+                           "RaisePropertyChanged(\"" + f.FieldNameConverted + "\");}\n}\n}\n\n";
+                        }
+
+                    }
+
+                    if (f.FieldType == "INT" || f.FieldType == "SMALLINT" || f.FieldType == "TINYINT")
+                    {
+                        s += "public int " + f.FieldNameConverted + "\n{\n" +
+                                "get{ return _" + f.FieldNameConverted + ";}\n" +
+                                "set{ _" + f.FieldNameConverted + " = value;\n" +
+                                "RaisePropertyChanged(\"" + f.FieldNameConverted + "\");}\n}\n\n";
+
+                    }
+
+                    if (f.FieldType == "BIGINT")
+                    {
+                        s += "public long " + f.FieldNameConverted + "\n{\n" +
+                                "get{ return _" + f.FieldNameConverted + ";}\n" +
+                                "set{ _" + f.FieldNameConverted + " = value;\n" +
+                                "RaisePropertyChanged(\"" + f.FieldNameConverted + "\");}\n}\n\n";
+
+                    }
+
+                    if (f.FieldType == "DECIMAL" || f.FieldType == "DOUBLE" || f.FieldType == "MONEY" || f.FieldType == "CURRENCY" || f.FieldType == "FLOAT")
+                    {
+                        s += "public double " + f.FieldNameConverted + "\n{\n" +
+                                "get{ return _" + f.FieldNameConverted + ";}\n" +
+                                "set{ _" + f.FieldNameConverted + " = value;\n" +
+                                "RaisePropertyChanged(\"" + f.FieldNameConverted + "\");}\n}\n\n";
+
+                    }
+
+                    if (f.FieldType == "DATETIME" || f.FieldType == "DATE" || f.FieldType == "DATETIME2" || f.FieldType == "SMALLDATE" || f.FieldType == "SMALLDATETIME")
+                    {
+
+                        s += "public DateTime " + f.FieldNameConverted + "\n{\n" +
+                                 "get{ return _" + f.FieldNameConverted + ";}\n" +
+                                 "set{ _" + f.FieldNameConverted + " = value;\n" +
+                                "RaisePropertyChanged(\"" + f.FieldNameConverted + "\");}\n}\n\n";
+
+                    }
+
+                    if (f.FieldType == "BOOL" || f.FieldType == "BIT")
+                    {
+                        s += "public bool " + f.FieldNameConverted + "\n{\n" +
+                                "get{ return _" + f.FieldNameConverted + ";}\n" +
+                                "set{ _" + f.FieldNameConverted + " = value;\n" +
+                                "RaisePropertyChanged(\"" + f.FieldNameConverted + "\");}\n}\n\n";
+
+                    }
+                }
+
+                s += "\n" +
+                    "#endregion\n\n" +
+                    "#region Implement INotifyPropertyChanged \n\n" +
+                    "public event PropertyChangedEventHandler PropertyChanged;\n" +
+                    "public void RaisePropertyChanged(string propertyName)\n" +
+                    "{\n" +
+                    "PropertyChangedEventHandler handler = PropertyChanged;\n" +
+                    "if (handler != null) handler(this, new PropertyChangedEventArgs(propertyName));\n" +
+                    "}\n" +
+                    "#endregion\n\n";
+
+                s += "#region Constructor\n\n" +
+                    "public " + TN + "()\n" +
+                    "{\n" +
+                    "// Constructor code goes here.\n" +
+                    "Initialize();\n" +
+                    "}\n\n" +
+                    "public " + TN + "(string DSN)\n" +
+                    "{\n" +
+                    "// Constructor code goes here.\n" +
+                    "Initialize();\n" +
+                    "classDatabaseConnectionString = DSN;\n" +
+                    "}\n\n" +
+                    "#endregion\n\n";
+
+                s += "public void CopyFields(SqlDataReader r)\n";
+                s += "{\n";
+                s += "try\n";
+                s += "{\n";
+
+                foreach (Field f in TheFields)
+                {
+                    if (f.FieldType == "VARCHAR" || f.FieldType == "CHAR" || f.FieldType == "NVARCHAR" ||
+                        f.FieldType == "TEXT" || f.FieldType == "UNIQUEIDENTIFIER" || f.FieldType == "GUID" ||
+                        f.FieldType == "SYSNAME")
+                    {
+                        s += "if (!Convert.IsDBNull(r[\"" + f.FieldName + "\"]))\n";
+                        s += "{\n";
+                        s += "_" + f.FieldNameConverted + " = r[\"" + f.FieldName + "\"] + \"\";\n";
+                        s += "}\n";
+                    }
+
+                    if (f.FieldType == "INT" || f.FieldType == "SMALLINT" || f.FieldType == "TINYINT")
+                    {
+                        s += "if (!Convert.IsDBNull(r[\"" + f.FieldName + "\"]))\n";
+                        s += "{\n";
+                        s += "_" + f.FieldNameConverted + " = Convert.ToInt32(r[\"" + f.FieldName + "\"]);\n";
+                        s += "}\n";
+                    }
+
+                    if (f.FieldType == "BIGINT")
+                    {
+                        s += "if (!Convert.IsDBNull(r[\"" + f.FieldName + "\"]))\n";
+                        s += "{\n";
+                        s += "_" + f.FieldNameConverted + " = Convert.ToInt64(r[\"" + f.FieldName + "\"]);\n";
+                        s += "}\n";
+                    }
+
+                    if (f.FieldType == "DECIMAL" || f.FieldType == "DOUBLE" || f.FieldType == "MONEY" || f.FieldType == "CURRENCY" || f.FieldType == "FLOAT")
+                    {
+                        s += "if (!Convert.IsDBNull(r[\"" + f.FieldName + "\"]))\n";
+                        s += "{\n";
+                        s += "_" + f.FieldNameConverted + " = Convert.ToDouble(r[\"" + f.FieldName + "\"]);\n";
+                        s += "}\n";
+                    }
+
+                    if (f.FieldType == "DATETIME" || f.FieldType == "DATE" || f.FieldType == "DATETIME2" || f.FieldType == "SMALLDATE" || f.FieldType == "SMALLDATETIME")
+                    {
+                        s += "if (!Convert.IsDBNull(r[\"" + f.FieldName + "\"]))\n";
+                        s += "{\n";
+                        s += "_" + f.FieldNameConverted + " = Convert.ToDateTime(r[\"" + f.FieldName + "\"]);\n";
+                        s += "}\n";
+                    }
+
+                    if (f.FieldType == "BOOL" || f.FieldType == "BIT")
+                    {
+                        s += "if (!Convert.IsDBNull(r[\"" + f.FieldName + "\"]))\n";
+                        s += "{\n";
+                        s += "_" + f.FieldNameConverted + " = Convert.ToBoolean(r[\"" + f.FieldName + "\"]);\n";
+                        s += "}\n";
+                    }
+                }
+
+                s += "}\n";
+                s += "catch (Exception ex)\n";
+                s += "{\n";
+                s += "throw(new Exception(\"" + TN + ".CopyFields \" +  ex.ToString()));\n";
+                s += "}\n";
+                s += "}\n\n";
+
+                s += "public void Initialize()\n";
+                s += "{\n";
+
+                foreach (Field f in TheFields)
+                {
+                    if (f.FieldType == "VARCHAR" || f.FieldType == "CHAR" || f.FieldType == "NVARCHAR" ||
+                        f.FieldType == "TEXT" || f.FieldType == "UNIQUEIDENTIFIER" || f.FieldType == "GUID" ||
+                        f.FieldType == "SYSNAME")
+                    {
+                        s += "_" + f.FieldNameConverted + " = \"\";\n";
+                    }
+
+                    if (f.FieldType == "INT" || f.FieldType == "SMALLINT" || f.FieldType == "TINYINT")
+                    {
+                        s += "_" + f.FieldNameConverted + " = 0;\n";
+                    }
+
+                    if (f.FieldType == "BIGINT")
+                    {
+                        s += "_" + f.FieldNameConverted + " = 0;\n";
+                    }
+
+                    if (f.FieldType == "DECIMAL" || f.FieldType == "DOUBLE" || f.FieldType == "MONEY" || f.FieldType == "CURRENCY" || f.FieldType == "FLOAT")
+                    {
+                        s += "_" + f.FieldNameConverted + " = 0.0;\n";
+                    }
+
+                    if (f.FieldType == "DATETIME" || f.FieldType == "DATE" || f.FieldType == "DATETIME2" || f.FieldType == "SMALLDATE" || f.FieldType == "SMALLDATETIME")
+                    {
+                        s += "_" + f.FieldNameConverted + " = Convert.ToDateTime(null);\n";
+                    }
+
+                    if (f.FieldType == "BOOL" || f.FieldType == "BIT")
+                    {
+                        s += "_" + f.FieldNameConverted + " = false;\n";
+                    }
+                }
+
+                s += "}\n\n";
+
+                if (IDFIELDTYPE == "BIGINT" || IDFIELDTYPE == "LONG")
+                {
+                    s += "public void Read(System.Int64 idx)\n";
+                }
+                else
+                {
+                    if (IDFIELDTYPE == "INT" || IDFIELDTYPE == "SMALLINT" || IDFIELDTYPE == "TINYINT")
+                    {
+                        s += "public void Read(System.Int32 idx)\n";
+                    }
+                    else
+                    {
+                        // this should never happen
+                        if (IDFIELDTYPE == "DECIMAL" || IDFIELDTYPE == "DOUBLE" || IDFIELDTYPE == "MONEY" || IDFIELDTYPE == "CURRENCY" || IDFIELDTYPE == "FLOAT")
+                        {
+                            s += "public void Read(System.Double idx)\n";
+                        }
+                        else
+                        {
+                            // default to a long
+                            s += "public void Read(string idx)\n";
+                        }
+                    }
+                }
+
+                s += "{\n";
+                s += "try\n";
+                s += "{\n";
+
+                s += "string sql =\"Select * from " + TN + " WHERE " + IDFIELDNAME + " = @ID\";\n";
+                s += "SqlConnection cn = new SqlConnection(_classDatabaseConnectionString);\n";
+                s += "cn.Open();\n";
+                s += "SqlCommand cmd = new SqlCommand(sql,cn);\n";
+
+                if (IDFIELDTYPE == "BIGINT" || IDFIELDTYPE == "LONG")
+                {
+                    s += "cmd.Parameters.Add(\"@ID\",System.Data.SqlDbType.BigInt).Value = idx;\n";
+                }
+                else
+                {
+                    if (IDFIELDTYPE == "INT" || IDFIELDTYPE == "SMALLINT" || IDFIELDTYPE == "TINYINT")
+                    {
+                        s += "cmd.Parameters.Add(\"@ID\",System.Data.SqlDbType.Int).Value = idx;\n";
+                    }
+                    else
+                    {
+                        // this should never happen
+                        if (IDFIELDTYPE == "DOUBLE" || IDFIELDTYPE == "MONEY" || IDFIELDTYPE == "CURRENCY" || IDFIELDTYPE == "FLOAT")
+                        {
+                            s += "cmd.Parameters.Add(\"@ID\",System.Data.SqlDbType.Money).Value = idx;\n";
+                        }
+                        else
+                        {
+                            // default to a long
+                            s += "cmd.Parameters.Add(\"@ID\",System.Data.SqlDbType.VarChar).Value = idx;\n";
+                        }
+                    }
+                }
+
+                s += "SqlDataReader r = cmd.ExecuteReader();\n";
+                s += "while (r.Read())\n";
+                s += "{\n";
+                s += "this.CopyFields(r);\n";
+                s += "}\n";
+                s += "r.Close();\n";
+                s += "cmd.Cancel();\n";
+                s += "cmd.Dispose();\n";
+                s += "cn.Close();\n";
+                s += "cn.Dispose();\n";
+                s += "}\n";
+                s += "catch (Exception ex)\n";
+                s += "{\n";
+                s += "throw(new Exception(\"" + TN + ".Read \" +  ex.ToString()));\n";
+                s += "}\n";
+                s += "}\n\n";
+
+                s += "public void Update()\n";
+
+                s += "{\n";
+                s += "try\n";
+                s += "{\n";
+
+                if (AUTONUMBER)
+                    s += "string sql = GetParameterSQL();\n";
+                else
+                    s += "string sql = GetParameterSQLForUpdate();\n";
+
+                s += "SqlConnection cn = new SqlConnection(_classDatabaseConnectionString);\n";
+                s += "cn.Open();\n";
+                s += "SqlCommand cmd = new SqlCommand(sql,cn);\n";
+
+                foreach (Field f in TheFields)
+                {
+                    if (f.FieldName != IDFIELDNAME || (!AUTONUMBER && f.FieldName == IDFIELDNAME))
+                    {
+
+                        if (f.FieldType == "VARCHAR" || f.FieldType == "CHAR" || f.FieldType == "NVARCHAR" ||
+                            f.FieldType == "TEXT" || f.FieldType == "SYSNAME")
+                        {
+                            if (f.AllowNulls) // also add the UI check here
+                            {
+                                s += "if (this._" + f.FieldNameConverted + " == null || this._" + f.FieldNameConverted + " == \"\" || this._" + f.FieldNameConverted + " == string.Empty)\n" +
+                                     "{\n " +
+                                     "cmd.Parameters.Add(\"@" + f.FieldNameConverted + "\",System.Data.SqlDbType.VarChar).Value = DBNull.Value;\n" +
+                                     "}\n" +
+                                     "else\n" +
+                                     "{\n " +
+                                     "cmd.Parameters.Add(\"@" + f.FieldNameConverted + "\",System.Data.SqlDbType.VarChar).Value = this._" + f.FieldNameConverted + ";\n" +
+                                     "}\n";
+                            }
+                            else
+                            {
+                                s += "cmd.Parameters.Add(\"@" + f.FieldNameConverted + "\",System.Data.SqlDbType.VarChar).Value = this._" + f.FieldNameConverted + ";\n";
+                            }
+                        }
+
+                        if (f.FieldType == "UNIQUEIDENTIFIER" || f.FieldType == "GUID")
+                        {
+                            s += "cmd.Parameters.Add(\"@" + f.FieldNameConverted + "\",System.Data.SqlDbType.UniqueIdentifier).Value = System.Guid.Parse(this._" + f.FieldNameConverted + ");\n";
+                        }
+
+                        if (f.FieldType == "INT")
+                        {
+                            s += "cmd.Parameters.Add(\"@" + f.FieldNameConverted + "\",System.Data.SqlDbType.Int).Value = this._" + f.FieldNameConverted + ";\n";
+                        }
+
+                        if (f.FieldType == "SMALLINT")
+                        {
+                            s += "cmd.Parameters.Add(\"@" + f.FieldNameConverted + "\",System.Data.SqlDbType.SmallInt).Value = this._" + f.FieldNameConverted + ";\n";
+                        }
+
+                        if (f.FieldType == "TINYINT")
+                        {
+                            s += "cmd.Parameters.Add(\"@" + f.FieldNameConverted + "\",System.Data.SqlDbType.TinyInt).Value = this._" + f.FieldNameConverted + ";\n";
+                        }
+
+                        if (f.FieldType == "BIGINT")
+                        {
+                            s += "cmd.Parameters.Add(\"@" + f.FieldNameConverted + "\",System.Data.SqlDbType.BigInt).Value = this._" + f.FieldNameConverted + ";\n";
+                        }
+
+                        if (f.FieldType == "DOUBLE" || f.FieldType == "MONEY" || f.FieldType == "CURRENCY" || f.FieldType == "FLOAT")
+                        {
+                            s += "cmd.Parameters.Add(\"@" + f.FieldNameConverted + "\",System.Data.SqlDbType.Money).Value = this._" + f.FieldNameConverted + ";\n";
+                        }
+
+                        if (f.FieldType == "DECIMAL")
+                        {
+                            s += "cmd.Parameters.Add(\"@" + f.FieldNameConverted + "\",System.Data.SqlDbType.Decimal).Value = this._" + f.FieldNameConverted + ";\n";
+                        }
+
+                        if (f.FieldType == "DATETIME" || f.FieldType == "DATE" || f.FieldType == "DATETIME2" || f.FieldType == "SMALLDATE" || f.FieldType == "SMALLDATETIME")
+                        {
+                            s += "cmd.Parameters.Add(\"@" + f.FieldNameConverted + "\",System.Data.SqlDbType.DateTime).Value = getDateOrNull(this._" + f.FieldNameConverted + ");\n";
+                        }
+
+                        if (f.FieldType == "BOOL")
+                        {
+                            s += "cmd.Parameters.Add(\"@" + f.FieldNameConverted + "\",System.Data.SqlDbType.Bool).Value = this._" + f.FieldNameConverted + ";\n";
+                        }
+
+                        if (f.FieldType == "BIT")
+                        {
+                            s += "cmd.Parameters.Add(\"@" + f.FieldNameConverted + "\",System.Data.SqlDbType.Bit).Value = this._" + f.FieldNameConverted + ";\n";
+                        }
+
+
+                        //System.Guid.Parse()
+                    }
+                }
+
+                s += "cmd.ExecuteNonQuery();\n";
+                s += "cmd.Cancel();\n";
+                s += "cmd.Dispose();\n";
+
+                if (AUTONUMBER)
+                {
+
+                    s += "if(" + IDFIELDNAME + " < 1)\n";
+                    s += "{\n";
+                    s += "SqlCommand cmd2 = new SqlCommand(\"SELECT @@IDENTITY\",cn);\n";
+
+                    if (IDFIELDTYPE == "BIGINT" || IDFIELDTYPE == "LONG")
+                    {
+                        s += "System.Int64 ii = Convert.ToInt64(cmd2.ExecuteScalar());\n";
+                    }
+                    else
+                    {
+                        if (IDFIELDTYPE == "INT" || IDFIELDTYPE == "SMALLINT" || IDFIELDTYPE == "TINYINT")
+                        {
+                            s += "System.Int32 ii = Convert.ToInt32(cmd2.ExecuteScalar());\n";
+                        }
+                        else
+                        {
+                            // this should never happen
+                            if (IDFIELDTYPE == "DOUBLE" || IDFIELDTYPE == "MONEY" || IDFIELDTYPE == "CURRENCY" || IDFIELDTYPE == "FLOAT")
+                            {
+                                s += "System.Double ii = Convert.ToDouble(cmd2.ExecuteScalar());\n";
+                            }
+                            else
+                            {
+                                // default to a long
+                                s += "System.Int64 ii = Convert.ToInt64(cmd2.ExecuteScalar());\n";
+                            }
+                        }
+                    }
+                    s += "cmd2.Cancel();\n";
+                    s += "cmd2.Dispose();\n";
+                    s += "_" + IDFIELDNAME + " = ii;\n";
+                    s += "}\n";
+
+                }
+
+                s += "cn.Close();\n";
+                s += "cn.Dispose();\n";
+                s += "}\n";
+                s += "catch (Exception ex)\n";
+                s += "{\n";
+                s += "throw(new Exception(\"" + TN + ".Update \" +  ex.ToString()));\n";
+                s += "}\n";
+                s += "}\n\n";
+
+                s += GeneratePrivateMethods();
+
+                s += "}\n";
+
+
+
+                result = s;
+
+            }
+            catch (Exception ex)
+            {
+                result = ex.Message;
+            }
+            return DoTheIndentation(result);
+        }
 
         private string FetchActualConnectionString(string TheKey)
         {
