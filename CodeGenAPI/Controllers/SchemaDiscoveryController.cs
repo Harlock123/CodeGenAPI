@@ -22,6 +22,7 @@ namespace CodeGenAPI.Controllers
     using System.Data.SqlClient;
     using Newtonsoft.Json;
     using Swashbuckle.AspNetCore.SwaggerGen;
+    using Swashbuckle.AspNetCore.Annotations;
     using System.Text;
     using System.Configuration;
     using System.Data;
@@ -53,7 +54,7 @@ namespace CodeGenAPI.Controllers
 
             cn.Open();
 
-            var sqlstring = "select A.*," +
+            string sqlstring = "select A.*," +
                             "B.TABLE_TYPE," +
                             "(SELECT OBJECT_ID(A.TABLE_NAME)) as TABLEID," +
                             "(SELECT IS_IDENTITY FROM SYS.columns SC WHERE SC.object_id = (SELECT OBJECT_ID(A.TABLE_NAME)) AND SC.NAME = A.COLUMN_NAME  ) as IS_IDENTITY " +
@@ -65,7 +66,7 @@ namespace CodeGenAPI.Controllers
 
             SqlDataAdapter da = new SqlDataAdapter(sqlstring, cn);
 
-            System.Data.DataSet d = new System.Data.DataSet();
+            DataSet d = new DataSet();
 
             da.Fill(d);
 
@@ -81,6 +82,7 @@ namespace CodeGenAPI.Controllers
 
         [HttpGet]
         [Route("GetTables")]
+        [SwaggerOperation(Summary = "Will Return a list of TABLE objects containing The DATABASE, The SCHEMA, The OBJECT Name, and its type (VIEW or BASE TABLE)")]
         public string GetTables(
             string CN = "DBwSSPI_Login")
         {
@@ -115,6 +117,7 @@ namespace CodeGenAPI.Controllers
 
         [HttpGet]
         [Route("GetListOfTables")]
+        [SwaggerOperation(Summary = "Returns all Tables and Views as an array of Strings with their names only")]
         public IEnumerable<string> GetListOfTables(
             string CN = "DBwSSPI_Login")
         {
@@ -316,6 +319,7 @@ namespace CodeGenAPI.Controllers
 
         [HttpGet]
         [Route("GetTableModel")]
+        [SwaggerOperation(Summary = "Creates code to encapsulate reading, writing, updating and deleting records from the indicated TableName")]
         public string GetTableModel(
             string CN = "DBwSSPI_Login",
             string TN = "MemberMain")
@@ -1937,7 +1941,40 @@ namespace CodeGenAPI.Controllers
             return result;
         }
 
+        [HttpGet]
+        [Route("GetWINFORMsDefinitionForTable")]
+        [SwaggerOperation(Summary =
+            "Will return a collection of code bits that can be inserted into\nA windows Forms application to hydrate a UI screen for the given Object")]
+        public string GetWINFORMsDefinitionForTable(string CN = "DBwSSPI_Login", string TNAME = "MemberMain")
+        {
+            // use the call to retrieve the fields from the chosen table
+            TheFields = (List<Models.Field>)GetTableSchemaFields(CN, TNAME);
+            TableName = TNAME;
+            
+            
+            string result = "";
+            result += "// ======================================================================\n";
+            result += "// ==This snippet replaces the designer generated content for the form ==\n";
+            result += "// ======================================================================\n";
+            result += "\n";
 
+            result += GenerateWinFormsInitializeComponent() + "\n\n";
+
+            result += "// ====================================================================================\n";
+            result += "// ==This snippet would go into the Forms cs file directly supporting the above code ==\n";
+            result += "// ====================================================================================\n";
+            result += "\n";
+
+            result += GeneratePacker() + "\n\n";
+            result += GenerateUnPacker() + "\n\n";
+            result += GenerateSupportRoutines() + "\n\n";
+            result += GenerateButtonHandlers() + "\n\n";
+            
+
+
+            return DoTheIndentation(result);
+            
+        }
 
         #region Private Stuff
 
@@ -2993,10 +3030,652 @@ namespace CodeGenAPI.Controllers
         }
 
         #endregion
+        
+        #region Winforms Stuff
 
+        private string GenerateSupportRoutines()
+        {
+            string s = "";
+            s += "private int GetAsInteger(string input)\n";
+            s += "{\n";
+            s += "int result = 0;\n";
+            s += "bool diditwork = int.TryParse(input, out result);\n";
+            s += "return result;\n";
+            s += "}\n";
+            s += "\n";
+            s += "private long GetAsLong(string input)\n";
+            s += "{\n";
+            s += "long result = 0;\n";
+            s += "bool diditwork = long.TryParse(input, out result);\n";
+            s += "return result;\n";
+            s += "}\n";
+            s += "\n";
+            s += "private double GetAsDouble(string input)\n";
+            s += "{\n";
+            s += "double result = 0;\n";
+            s += "bool diditwork = double.TryParse(input, out result);\n";
+            s += "return result;\n";
+            s += "}\n";
+            s += "\n";
+            s += "private DateTime GetAsDateTime(string input)\n";
+            s += "{\n";
+            s += "DateTime result = Convert.ToDateTime(null);\n";
+            s += "bool diditwork = DateTime.TryParse(input, out result);\n";
+            s += "return result;\n";
+            s += "}\n";
+            s += "\n";
+
+            return s;
+        }
+
+        private string GenerateUnPacker()
+        {
+            string s = "\n";
+
+            s += "private void Unpack(" + TableName + " thing)\n";
+            s += "{\n";
+
+            foreach (Field f in TheFields)
+            {
+                if (f.FieldType == "VARCHAR" || f.FieldType == "CHAR" || f.FieldType == "NVARCHAR" ||
+                    f.FieldType == "TEXT" || f.FieldType == "UNIQUEIDENTIFIER" || f.FieldType == "GUID" ||
+                    f.FieldType == "SYSNAME")
+                {
+                    s += "txt" + f.FieldNameConverted + ".Text = thing." + f.FieldNameConverted + " + \"\";\n";
+                }
+
+                if (f.FieldType == "INT" || f.FieldType == "SMALLINT" ||
+                   f.FieldType == "TINYINT" || f.FieldType == "BIGINT" ||
+                   f.FieldType == "DOUBLE" || f.FieldType == "MONEY" || f.FieldType == "CURRENCY" ||
+                   f.FieldType == "FLOAT")
+                {
+                    s += "txt" + f.FieldNameConverted + ".Text = thing." + f.FieldNameConverted + ".ToString() + \"\";\n";
+                }
+
+
+                if (f.FieldType == "DATETIME" || f.FieldType == "DATE" || f.FieldType == "DATETIME2" || f.FieldType == "SMALLDATE" || f.FieldType == "SMALLDATETIME")
+                {
+                    s += "if (thing." + f.FieldNameConverted + " != Convert.ToDateTime(null))\n";
+                    s += "{\n";
+                    s += "dtp" + f.FieldNameConverted + ".Value = thing." + f.FieldNameConverted + ";\n";
+                    s += "}\n";
+                    s += "else\n";
+                    s += "{\n";
+                    s += "dtp" + f.FieldNameConverted + ".Value = Convert.ToDateTime(null);\n";
+                    s += "}\n";
+                }
+
+                if (f.FieldType == "BOOL" || f.FieldType == "BIT")
+                {
+                    s += "if (thing." + f.FieldNameConverted + ")\n";
+                    s += "{\n";
+                    s += "chk" + f.FieldNameConverted + ".Checked = true;\n";
+                    s += "}\n";
+                    s += "else\n";
+                    s += "{\n";
+                    s += "chk" + f.FieldNameConverted + ".Checked = false;\n";
+                    s += "}\n";
+                }
+            }
+
+            s += "}\n";
+
+            return s;
+        }
+
+        private string GeneratePacker()
+        {
+            string s = "\n";
+
+            s += "private " + TableName + " Pack()\n";
+            s += "{\n";
+
+            s += "" + TableName + " thing = new " + TableName + "();\n\n";
+
+            foreach (Field f in TheFields)
+            {
+                if (f.FieldType == "VARCHAR" || f.FieldType == "CHAR" || f.FieldType == "NVARCHAR" ||
+                    f.FieldType == "TEXT" || f.FieldType == "UNIQUEIDENTIFIER" || f.FieldType == "GUID" ||
+                    f.FieldType == "SYSNAME")
+                {
+                    s += "thing." + f.FieldNameConverted + " = txt" + f.FieldNameConverted + ".Text + \"\";\n";
+                }
+
+                if (f.FieldType == "INT" || f.FieldType == "SMALLINT" ||
+                    f.FieldType == "TINYINT" || f.FieldType == "BIGINT")
+                {
+                    s += "thing." + f.FieldNameConverted + " = GetAsInteger(txt" + f.FieldNameConverted + ".Text);\n";
+                }
+
+                if (f.FieldType == "DOUBLE" || f.FieldType == "MONEY" || f.FieldType == "CURRENCY" ||
+                    f.FieldType == "FLOAT")
+                {
+                    s += "thing." + f.FieldNameConverted + " = GetAsDouble(txt" + f.FieldNameConverted + ".Text);\n";
+                }
+
+                if (f.FieldType == "BIGINT")
+                {
+                    s += "thing." + f.FieldNameConverted + " = GetAsLong(txt" + f.FieldNameConverted + ".Text);\n";
+                }
+
+
+                if (f.FieldType == "DATETIME" || f.FieldType == "DATE" || f.FieldType == "DATETIME2" || f.FieldType == "SMALLDATE" || f.FieldType == "SMALLDATETIME")
+                {
+                    s += "thing." + f.FieldNameConverted + " = GetAsDateTime(dtp" + f.FieldNameConverted + ".Text);\n";
+                }
+
+                if (f.FieldType == "BOOL" || f.FieldType == "BIT")
+                {
+                    s += "if (chk" + f.FieldNameConverted + ".Checked)\n";
+                    s += "{\n";
+                    s += "thing." + f.FieldNameConverted + " = true;\n";
+                    s += "}\n";
+                    s += "else\n";
+                    s += "{\n";
+                    s += "thing." + f.FieldNameConverted + " = false;\n";
+                    s += "}\n";
+                }
+            }
+
+            s += "\n";
+            s += "return thing;\n";
+
+            s += "}\n";
+
+            return s;
+        }
+
+        private string GenerateButtonHandlers()
+        {
+            string s = "";
+
+            s += "private void btnEnableAll_Click(object sender, EventArgs e)\n";
+            s += "{\n";
+
+            foreach (Field f in TheFields)
+            {
+
+                if (f.FieldType == "VARCHAR" || f.FieldType == "CHAR" || f.FieldType == "NVARCHAR" ||
+                    f.FieldType == "TEXT" || f.FieldType == "UNIQUEIDENTIFIER" || f.FieldType == "GUID" ||
+                    f.FieldType == "SYSNAME" || f.FieldType == "INT" || f.FieldType == "SMALLINT" ||
+                    f.FieldType == "TINYINT" || f.FieldType == "BIGINT" || f.FieldType == "DECIMAL" ||
+                    f.FieldType == "DOUBLE" || f.FieldType == "MONEY" || f.FieldType == "CURRENCY" ||
+                    f.FieldType == "FLOAT")
+                {
+                    s += "this.txt" + f.FieldNameConverted + ".Enabled = true;\n";
+
+                }
+
+                if (f.FieldType == "DATETIME" || f.FieldType == "DATE" || f.FieldType == "DATETIME2" || f.FieldType == "SMALLDATE" || f.FieldType == "SMALLDATETIME")
+                {
+                    s += "this.dtp" + f.FieldNameConverted + ".Enabled = true;\n";
+                }
+
+                if (f.FieldType == "BOOL" || f.FieldType == "BIT")
+                {
+                    s += "this.chk" + f.FieldNameConverted + ".Enabled = true;\n";
+                }
+
+            }
+
+            s += "}\n\n";
+
+
+            s += "private void btnDisableAll_Click(object sender, EventArgs e)\n";
+            s += "{\n";
+
+            foreach (Field f in TheFields)
+            {
+
+                if (f.FieldType == "VARCHAR" || f.FieldType == "CHAR" || f.FieldType == "NVARCHAR" ||
+                    f.FieldType == "TEXT" || f.FieldType == "UNIQUEIDENTIFIER" || f.FieldType == "GUID" ||
+                    f.FieldType == "SYSNAME" || f.FieldType == "INT" || f.FieldType == "SMALLINT" ||
+                    f.FieldType == "TINYINT" || f.FieldType == "BIGINT" || f.FieldType == "DECIMAL" ||
+                    f.FieldType == "DOUBLE" || f.FieldType == "MONEY" || f.FieldType == "CURRENCY" ||
+                    f.FieldType == "FLOAT")
+                {
+                    s += "this.txt" + f.FieldNameConverted + ".Enabled = false;\n";
+
+                }
+
+                if (f.FieldType == "DATETIME" || f.FieldType == "DATE" || f.FieldType == "DATETIME2" || f.FieldType == "SMALLDATE" || f.FieldType == "SMALLDATETIME")
+                {
+                    s += "this.dtp" + f.FieldNameConverted + ".Enabled = false;\n";
+                }
+
+                if (f.FieldType == "BOOL" || f.FieldType == "BIT")
+                {
+                    s += "this.chk" + f.FieldNameConverted + ".Enabled = false;\n";
+                }
+
+            }
+
+            s += "}\n\n";
+
+            s += "private void btnHideAll_Click(object sender, EventArgs e)\n";
+            s += "{\n";
+
+            foreach (Field f in TheFields)
+            {
+
+                if (f.FieldType == "VARCHAR" || f.FieldType == "CHAR" || f.FieldType == "NVARCHAR" ||
+                    f.FieldType == "TEXT" || f.FieldType == "UNIQUEIDENTIFIER" || f.FieldType == "GUID" ||
+                    f.FieldType == "SYSNAME" || f.FieldType == "INT" || f.FieldType == "SMALLINT" ||
+                    f.FieldType == "TINYINT" || f.FieldType == "BIGINT" || f.FieldType == "DECIMAL" ||
+                    f.FieldType == "DOUBLE" || f.FieldType == "MONEY" || f.FieldType == "CURRENCY" ||
+                    f.FieldType == "FLOAT")
+                {
+                    s += "this.txt" + f.FieldNameConverted + ".Visible = false;\n";
+
+                }
+
+                if (f.FieldType == "DATETIME" || f.FieldType == "DATE" || f.FieldType == "DATETIME2" || f.FieldType == "SMALLDATE" || f.FieldType == "SMALLDATETIME")
+                {
+                    s += "this.dtp" + f.FieldNameConverted + ".Visible = false;\n";
+                }
+
+                if (f.FieldType == "BOOL" || f.FieldType == "BIT")
+                {
+                    s += "this.chk" + f.FieldNameConverted + ".Visible = false;\n";
+                }
+
+                s += "this.lbl" + f.FieldNameConverted + ".Visible = false;\n";
+
+            }
+
+            s += "}\n\n";
+
+            s += "private void btnShowAll_Click(object sender, EventArgs e)\n";
+            s += "{\n";
+
+            foreach (Field f in TheFields)
+            {
+
+                if (f.FieldType == "VARCHAR" || f.FieldType == "CHAR" || f.FieldType == "NVARCHAR" ||
+                    f.FieldType == "TEXT" || f.FieldType == "UNIQUEIDENTIFIER" || f.FieldType == "GUID" ||
+                    f.FieldType == "SYSNAME" || f.FieldType == "INT" || f.FieldType == "SMALLINT" ||
+                    f.FieldType == "TINYINT" || f.FieldType == "BIGINT" || f.FieldType == "DECIMAL" ||
+                    f.FieldType == "DOUBLE" || f.FieldType == "MONEY" || f.FieldType == "CURRENCY" ||
+                    f.FieldType == "FLOAT")
+                {
+                    s += "this.txt" + f.FieldNameConverted + ".Visible = true;\n";
+
+                }
+
+                if (f.FieldType == "DATETIME" || f.FieldType == "DATE" || f.FieldType == "DATETIME2" || f.FieldType == "SMALLDATE" || f.FieldType == "SMALLDATETIME")
+                {
+                    s += "this.dtp" + f.FieldNameConverted + ".Visible = true;\n";
+                }
+
+                if (f.FieldType == "BOOL" || f.FieldType == "BIT")
+                {
+                    s += "this.chk" + f.FieldNameConverted + ".Visible = true;\n";
+                }
+
+                s += "this.lbl" + f.FieldNameConverted + ".Visible = true;\n";
+
+            }
+
+            s += "}\n\n";
+
+            return s;
+        }
+
+        private string GenerateWinFormsInitializeComponent()
+        {
+
+            string s = "";
+
+            s += "#region Windows Form Designer generated code\n\n";
+
+            s += "private void InitializeComponent()\n";
+            s += "{\n";
+            s += "this.components = new System.ComponentModel.Container();\n";
+
+            foreach (Field f in TheFields)
+            {
+                if (f.FieldType == "VARCHAR" || f.FieldType == "CHAR" || f.FieldType == "NVARCHAR" ||
+                    f.FieldType == "TEXT" || f.FieldType == "UNIQUEIDENTIFIER" || f.FieldType == "GUID" ||
+                    f.FieldType == "SYSNAME" || f.FieldType == "INT" || f.FieldType == "SMALLINT" ||
+                    f.FieldType == "TINYINT" || f.FieldType == "BIGINT" || f.FieldType == "DECIMAL" ||
+                    f.FieldType == "DOUBLE" || f.FieldType == "MONEY" || f.FieldType == "CURRENCY" ||
+                    f.FieldType == "FLOAT")
+                {
+                    s += "this.txt" + f.FieldNameConverted + "  = new System.Windows.Forms.TextBox();\n";
+                }
+
+                if (f.FieldType == "DATETIME" || f.FieldType == "DATE" || f.FieldType == "DATETIME2" || f.FieldType == "SMALLDATE" || f.FieldType == "SMALLDATETIME")
+                {
+                    s += "this.dtp" + f.FieldNameConverted + "  = new System.Windows.Forms.DateTimePicker();\n";
+                }
+
+                if (f.FieldType == "BOOL" || f.FieldType == "BIT")
+                {
+                    s += "this.chk" + f.FieldNameConverted + "  = new System.Windows.Forms.CheckBox();\n";
+                }
+            }
+
+            foreach (Field f in TheFields)
+            {
+                if (f.FieldType == "VARCHAR" || f.FieldType == "CHAR" || f.FieldType == "NVARCHAR" ||
+                    f.FieldType == "TEXT" || f.FieldType == "UNIQUEIDENTIFIER" || f.FieldType == "GUID" ||
+                    f.FieldType == "SYSNAME" || f.FieldType == "INT" || f.FieldType == "SMALLINT" ||
+                    f.FieldType == "TINYINT" || f.FieldType == "BIGINT" || f.FieldType == "DECIMAL" ||
+                    f.FieldType == "DOUBLE" || f.FieldType == "MONEY" || f.FieldType == "CURRENCY" ||
+                    f.FieldType == "FLOAT")
+                {
+                    s += "this.lbl" + f.FieldNameConverted + "  = new System.Windows.Forms.Label();\n";
+                }
+
+                if (f.FieldType == "DATETIME" || f.FieldType == "DATE" || f.FieldType == "DATETIME2" || f.FieldType == "SMALLDATE" || f.FieldType == "SMALLDATETIME")
+                {
+                    s += "this.lbl" + f.FieldNameConverted + "  = new System.Windows.Forms.Label();\n";
+                }
+
+                if (f.FieldType == "BOOL" || f.FieldType == "BIT")
+                {
+                    s += "this.lbl" + f.FieldNameConverted + "  = new System.Windows.Forms.Label();\n";
+                }
+            }
+
+            s += "this.btnHideAll = new System.Windows.Forms.Button();\n";
+            s += "this.btnShowAll = new System.Windows.Forms.Button();\n";
+            s += "this.btnDisableAll = new System.Windows.Forms.Button();\n";
+            s += "this.btnEnableAll = new System.Windows.Forms.Button();\n";
+
+            s += "this.SuspendLayout();\n";
+
+            int ctlnum = 0;
+            int colnum = 0;
+            int CTRLnum = 0;
+            int ctrlX = 0;
+
+
+            foreach (Field f in TheFields)
+            {
+
+                colnum = ctlnum / (int)20;
+
+                ctrlX = (colnum * 320) + 160;
+
+
+                if (f.FieldType == "VARCHAR" || f.FieldType == "CHAR" || f.FieldType == "NVARCHAR" ||
+                    f.FieldType == "TEXT" || f.FieldType == "UNIQUEIDENTIFIER" || f.FieldType == "GUID" ||
+                    f.FieldType == "SYSNAME" || f.FieldType == "INT" || f.FieldType == "SMALLINT" ||
+                    f.FieldType == "TINYINT" || f.FieldType == "BIGINT" || f.FieldType == "DECIMAL" ||
+                    f.FieldType == "DOUBLE" || f.FieldType == "MONEY" || f.FieldType == "CURRENCY" ||
+                    f.FieldType == "FLOAT")
+                {
+                    s += "//\n";
+                    s += "// txt" + f.FieldNameConverted + "\n";
+                    s += "//\n";
+
+                    s += "this.txt" + f.FieldNameConverted + ".Location = new System.Drawing.Point(" + ctrlX + ", " + ((CTRLnum * 36) + 12).ToString() + ");\n";
+                    s += "this.txt" + f.FieldNameConverted + ".Margin = new System.Windows.Forms.Padding(4);\n";
+                    s += "this.txt" + f.FieldNameConverted + ".Name = \"txt" + f.FieldNameConverted + "\";\n";
+                    s += "this.txt" + f.FieldNameConverted + ".ReadOnly = false;\n";
+                    s += "this.txt" + f.FieldNameConverted + ".Size = new System.Drawing.Size(160, 22);\n";
+                    s += "this.txt" + f.FieldNameConverted + ".TabIndex = " + ctlnum.ToString() + ";\n";
+
+                }
+
+                if (f.FieldType == "DATETIME" || f.FieldType == "DATE" || f.FieldType == "DATETIME2" || f.FieldType == "SMALLDATE" || f.FieldType == "SMALLDATETIME")
+                {
+                    s += "//\n";
+                    s += "// dtp" + f.FieldNameConverted + "\n";
+                    s += "//\n";
+
+                    s += "this.dtp" + f.FieldNameConverted + ".Format = System.Windows.Forms.DateTimePickerFormat.Short;\n";
+
+
+                    s += "this.dtp" + f.FieldNameConverted + ".Location = new System.Drawing.Point(" + ctrlX + ", " + ((CTRLnum * 36) + 12).ToString() + ");\n";
+                    s += "this.dtp" + f.FieldNameConverted + ".Name = \"dtp" + f.FieldNameConverted + "\";\n";
+                    s += "this.dtp" + f.FieldNameConverted + ".Size = new System.Drawing.Size(120, 22);\n";
+                    s += "this.dtp" + f.FieldNameConverted + ".TabIndex = " + ctlnum.ToString() + ";\n";
+                }
+
+                if (f.FieldType == "BOOL" || f.FieldType == "BIT")
+                {
+                    s += "//\n";
+                    s += "// chk" + f.FieldNameConverted + "\n";
+                    s += "//\n";
+
+                    s += "this.chk" + f.FieldNameConverted + ".Location = new System.Drawing.Point(" + ctrlX + ", " + ((CTRLnum * 36) + 12).ToString() + ");\n";
+                    s += "this.chk" + f.FieldNameConverted + ".AutoSize = true\n";
+                    s += "this.chk" + f.FieldNameConverted + ".Name = \"chk" + f.FieldNameConverted + "\";\n";
+                    s += "this.chk" + f.FieldNameConverted + ".Text = \"" + f.FieldNameConverted + "\";\n";
+                    s += "this.chk" + f.FieldNameConverted + ".Size = new System.Drawing.Size(100, 22);\n";
+                    s += "this.chk" + f.FieldNameConverted + ".TabIndex = " + ctlnum.ToString() + ";\n";
+                    s += "this.chk" + f.FieldNameConverted + ".UseVisualStyleBackColor = true\n";
+
+                }
+
+                ctlnum += 1;
+                CTRLnum += 1;
+
+                if (CTRLnum == 20)
+                {
+                    CTRLnum = 0;
+                }
+            }
+
+
+
+            ctlnum = 0;
+            colnum = 0;
+            CTRLnum = 0;
+            ctrlX = 0;
+
+            foreach (Field f in TheFields)
+            {
+                colnum = ctlnum / (int)20;
+
+                ctrlX = (colnum * 320) + 16;
+
+                if (f.FieldType == "VARCHAR" || f.FieldType == "CHAR" || f.FieldType == "NVARCHAR" ||
+                    f.FieldType == "TEXT" || f.FieldType == "UNIQUEIDENTIFIER" || f.FieldType == "GUID" ||
+                    f.FieldType == "SYSNAME" || f.FieldType == "INT" || f.FieldType == "SMALLINT" ||
+                    f.FieldType == "TINYINT" || f.FieldType == "BIGINT" || f.FieldType == "DECIMAL" ||
+                    f.FieldType == "DOUBLE" || f.FieldType == "MONEY" || f.FieldType == "CURRENCY" ||
+                    f.FieldType == "FLOAT" || f.FieldType == "BOOL" || f.FieldType == "BIT" ||
+                    f.FieldType == "DATETIME" || f.FieldType == "DATE" || f.FieldType == "DATETIME2" ||
+                    f.FieldType == "SMALLDATE" || f.FieldType == "SMALLDATETIME")
+                {
+                    s += "//\n";
+                    s += "// lbl" + f.FieldNameConverted + "\n";
+                    s += "//\n";
+
+                    s += "this.lbl" + f.FieldNameConverted + ".Location = new System.Drawing.Point(" + ctrlX + ", " + ((CTRLnum * 36) + 12).ToString() + ");\n";
+                    s += "this.lbl" + f.FieldNameConverted + ".Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);\n";
+                    s += "this.lbl" + f.FieldNameConverted + ".Name = \"lbl" + f.FieldNameConverted + "\";\n";
+                    s += "this.lbl" + f.FieldNameConverted + ".AutoSize = true;\n";
+                    s += "this.lbl" + f.FieldNameConverted + ".Size = new System.Drawing.Size(160, 20);\n";
+                    s += "this.lbl" + f.FieldNameConverted + ".TabIndex = " + ctlnum.ToString() + ";\n";
+                    s += "this.lbl" + f.FieldNameConverted + ".Text = \"" + f.FieldNameConverted + "\";\n";
+                }
+
+
+                ctlnum += 1;
+                CTRLnum += 1;
+
+                if (CTRLnum == 20)
+                {
+                    CTRLnum = 0;
+                }
+            }
+
+            // Add the 4 Buttons At the Bottom of the Interface
+
+            var thestring = "";
+            thestring += "// \n";
+            thestring += "// btnHideAll\n";
+            thestring += "// \n";
+            thestring += "this.btnHideAll.Location = new System.Drawing.Point(14, 770);\n";
+            thestring += "this.btnHideAll.Name = \"btnHideAll\";\n";
+            thestring += "this.btnHideAll.Size = new System.Drawing.Size(111, 27);\n";
+            thestring += "this.btnHideAll.TabIndex = 61;\n";
+            thestring += "this.btnHideAll.Text = \"Hide All\";\n";
+            thestring += "this.btnHideAll.UseVisualStyleBackColor = true;\n";
+            thestring += "// \n";
+            thestring += "// btnShowAll\n";
+            thestring += "// \n";
+            thestring += "this.btnShowAll.Location = new System.Drawing.Point(131, 770);\n";
+            thestring += "this.btnShowAll.Name = \"btnShowAll\";\n";
+            thestring += "this.btnShowAll.Size = new System.Drawing.Size(111, 27);\n";
+            thestring += "this.btnShowAll.TabIndex = 62;\n";
+            thestring += "this.btnShowAll.Text = \"Show All\";\n";
+            thestring += "this.btnShowAll.UseVisualStyleBackColor = true;\n";
+            thestring += "// \n";
+            thestring += "// btnDisableAll\n";
+            thestring += "// \n";
+            thestring += "this.btnDisableAll.Location = new System.Drawing.Point(248, 770);\n";
+            thestring += "this.btnDisableAll.Name = \"btnDisableAll\";\n";
+            thestring += "this.btnDisableAll.Size = new System.Drawing.Size(111, 27);\n";
+            thestring += "this.btnDisableAll.TabIndex = 63;\n";
+            thestring += "this.btnDisableAll.Text = \"Disable All\";\n";
+            thestring += "this.btnDisableAll.UseVisualStyleBackColor = true;\n";
+            thestring += "// \n";
+            thestring += "// btnEnableAll\n";
+            thestring += "// \n";
+            thestring += "this.btnEnableAll.Location = new System.Drawing.Point(365, 770);\n";
+            thestring += "this.btnEnableAll.Name = \"btnEnableAll\";\n";
+            thestring += "this.btnEnableAll.Size = new System.Drawing.Size(111, 27);\n";
+            thestring += "this.btnEnableAll.TabIndex = 64;\n";
+            thestring += "this.btnEnableAll.Text = \"Enable All\";\n";
+            thestring += "this.btnEnableAll.UseVisualStyleBackColor = true;\n\n";
+
+            s += thestring;
+
+
+            s += "this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);\n";
+            s += "this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;\n";
+            s += "this.ClientSize = new System.Drawing.Size(1339, 821);\n\n";
+
+
+            s += "this.Controls.Add(this.btnEnableAll);\n";
+            s += "this.Controls.Add(this.btnDisableAll);\n";
+            s += "this.Controls.Add(this.btnShowAll);\n";
+            s += "this.Controls.Add(this.btnHideAll);\n";
+
+            foreach (Field f in TheFields)
+            {
+                if (f.FieldType == "VARCHAR" || f.FieldType == "CHAR" || f.FieldType == "NVARCHAR" ||
+                    f.FieldType == "TEXT" || f.FieldType == "UNIQUEIDENTIFIER" || f.FieldType == "GUID" ||
+                    f.FieldType == "SYSNAME" || f.FieldType == "INT" || f.FieldType == "SMALLINT" ||
+                    f.FieldType == "TINYINT" || f.FieldType == "BIGINT" || f.FieldType == "DECIMAL" ||
+                    f.FieldType == "DOUBLE" || f.FieldType == "MONEY" || f.FieldType == "CURRENCY" ||
+                    f.FieldType == "FLOAT")
+                {
+                    s += "this.Controls.Add(this.txt" + f.FieldNameConverted + ");\n";
+                }
+
+                if (f.FieldType == "DATETIME" || f.FieldType == "DATE" || f.FieldType == "DATETIME2" || f.FieldType == "SMALLDATE" || f.FieldType == "SMALLDATETIME")
+                {
+                    s += "this.Controls.Add(this.dtp" + f.FieldNameConverted + ");\n";
+                }
+
+                if (f.FieldType == "BOOL" || f.FieldType == "BIT")
+                {
+                    s += "this.Controls.Add(this.chk" + f.FieldNameConverted + ");\n";
+                }
+
+            }
+
+            foreach (Field f in TheFields)
+            {
+                if (f.FieldType == "VARCHAR" || f.FieldType == "CHAR" || f.FieldType == "NVARCHAR" ||
+                    f.FieldType == "TEXT" || f.FieldType == "UNIQUEIDENTIFIER" || f.FieldType == "GUID" ||
+                    f.FieldType == "SYSNAME" || f.FieldType == "INT" || f.FieldType == "SMALLINT" ||
+                    f.FieldType == "TINYINT" || f.FieldType == "BIGINT" || f.FieldType == "DECIMAL" ||
+                    f.FieldType == "DOUBLE" || f.FieldType == "MONEY" || f.FieldType == "CURRENCY" ||
+                    f.FieldType == "FLOAT")
+                {
+                    s += "this.Controls.Add(this.lbl" + f.FieldNameConverted + ");\n";
+                }
+
+                if (f.FieldType == "DATETIME" || f.FieldType == "DATE" || f.FieldType == "DATETIME2" || f.FieldType == "SMALLDATE" || f.FieldType == "SMALLDATETIME")
+                {
+                    s += "this.Controls.Add(this.lbl" + f.FieldNameConverted + ");\n";
+                }
+
+                if (f.FieldType == "BOOL" || f.FieldType == "BIT")
+                {
+                    s += "this.Controls.Add(this.lbl" + f.FieldNameConverted + ");\n";
+                }
+
+            }
+
+            s += "this.Margin = new System.Windows.Forms.Padding(4);\n";
+            s += "this.Name = \"frm" + TableName + "UI\";\n";
+            s += "this.Text = \"frm" + TableName + "UI\";\n";
+            s += "this.ResumeLayout(false);\n";
+            s += "this.PerformLayout();\n";
+
+            s += "}\n";
+
+            s += "#endregion \n\n";
+
+            foreach (Field f in TheFields)
+            {
+                if (f.FieldType == "VARCHAR" || f.FieldType == "CHAR" || f.FieldType == "NVARCHAR" ||
+                    f.FieldType == "TEXT" || f.FieldType == "UNIQUEIDENTIFIER" || f.FieldType == "GUID" ||
+                    f.FieldType == "SYSNAME" || f.FieldType == "INT" || f.FieldType == "SMALLINT" ||
+                    f.FieldType == "TINYINT" || f.FieldType == "BIGINT" || f.FieldType == "DECIMAL" ||
+                    f.FieldType == "DOUBLE" || f.FieldType == "MONEY" || f.FieldType == "CURRENCY" ||
+                    f.FieldType == "FLOAT")
+                {
+                    s += "private System.Windows.Forms.TextBox txt" + f.FieldNameConverted + ";\n";
+                }
+
+                if (f.FieldType == "DATETIME" || f.FieldType == "DATE" || f.FieldType == "DATETIME2" || f.FieldType == "SMALLDATE" || f.FieldType == "SMALLDATETIME")
+                {
+                    s += "private System.Windows.Forms.DateTimePicker dtp" + f.FieldNameConverted + ";\n";
+                }
+
+                if (f.FieldType == "BOOL" || f.FieldType == "BIT")
+                {
+                    s += "private System.Windows.Forms.CheckBox chk" + f.FieldNameConverted + ";\n";
+                }
+
+            }
+
+            foreach (Field f in TheFields)
+            {
+                if (f.FieldType == "VARCHAR" || f.FieldType == "CHAR" || f.FieldType == "NVARCHAR" ||
+                    f.FieldType == "TEXT" || f.FieldType == "UNIQUEIDENTIFIER" || f.FieldType == "GUID" ||
+                    f.FieldType == "SYSNAME" || f.FieldType == "INT" || f.FieldType == "SMALLINT" ||
+                    f.FieldType == "TINYINT" || f.FieldType == "BIGINT" || f.FieldType == "DECIMAL" ||
+                    f.FieldType == "DOUBLE" || f.FieldType == "MONEY" || f.FieldType == "CURRENCY" ||
+                    f.FieldType == "FLOAT")
+                {
+                    s += "private System.Windows.Forms.Label lbl" + f.FieldNameConverted + ";\n";
+                }
+
+                if (f.FieldType == "DATETIME" || f.FieldType == "DATE" || f.FieldType == "DATETIME2" || f.FieldType == "SMALLDATE" || f.FieldType == "SMALLDATETIME")
+                {
+                    s += "private System.Windows.Forms.Label lbl" + f.FieldNameConverted + ";\n";
+                }
+
+                if (f.FieldType == "BOOL" || f.FieldType == "BIT")
+                {
+                    s += "private System.Windows.Forms.Label lbl" + f.FieldNameConverted + ";\n";
+                }
+
+            }
+
+            s += "private System.Windows.Forms.Button btnHideAll;\n";
+            s += "private System.Windows.Forms.Button btnShowAll;\n";
+            s += "private System.Windows.Forms.Button btnDisableAll;\n";
+            s += "private System.Windows.Forms.Button btnEnableAll;\n";
+
+            return s;
+        }
+
+        #endregion
+        
         #region InterfaceClasses
 
-        
+
 
         #endregion
     }

@@ -1,4 +1,7 @@
-﻿using Microsoft.OpenApi.Models;
+﻿using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.Build.Evaluation;
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +11,10 @@ builder.Services.AddControllers();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "CodeGenAPI", Version = "v1" });
+    var filePath = Path.Combine(System.AppContext.BaseDirectory, "CodeGenAPI.xml");
+    c.IncludeXmlComments(filePath);
+    c.EnableAnnotations();
+    
 });
 
 var app = builder.Build();
@@ -16,7 +23,13 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "CodeGenAPI v1"));
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "CodeGenAPI v1");
+        
+
+
+    });
 }
 
 app.UseCors();
@@ -28,4 +41,5 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
 
