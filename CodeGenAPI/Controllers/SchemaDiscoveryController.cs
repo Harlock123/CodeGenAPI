@@ -1036,6 +1036,7 @@ namespace CodeGenAPI.Controllers
 
         [HttpGet]
         [Route("GetAllTablesInterfaceClassesFromDataBase")]
+        [SwaggerOperation(Summary = "Will retrieve Lightweight Data Object classes for each table and View in the target database")]
         public string GetAllTablesInterfaceClassesFromDataBase(
             string CN = "DBwSSPI_Login")
         {
@@ -1055,6 +1056,10 @@ namespace CodeGenAPI.Controllers
 
         [HttpGet]
         [Route("GetGetterWebMethodFromSQLCode")]
+        [SwaggerOperation(Summary = "Given a specific Query SQLCode\n" + 
+                                    "Will return a Lightweight data object named Classname if GenerateInterfaceClass if True,\n" +
+                                    " as well as a restful endpoint code that will return\n" +
+                                    "as List<ClassName> or a single ClassName object. Dependant on returnsingleton")]
         public string GetGetterWebMethodFromSQLCode(
             string CN = "DBwSSPI_Login", string SQLCode = "Select top 1 * from SOMETABLE", 
             string ClassName = "MyAwesomeObject", string FilterFieldName = "SomeFieldName", Boolean ReturnSingleton = false)
@@ -1365,6 +1370,10 @@ namespace CodeGenAPI.Controllers
 
         [HttpGet]
         [Route("GetGetterWebMethodFromTableName")]
+        [SwaggerOperation(Summary = "Given a TableName TNAME\n" +
+            "Will return a Lightweight data object named Classname if GenerateInterfaceClass if True,\n" +
+            " as well as a restful endpoint code that will return\n" +
+            "as List<ClassName> or a single ClassName object. Dependant on returnsingleton")]
         public string GetGetterWebMethodFromTableName(
             string CN = "DBwSSPI_Login", string TNAME = "TNAME",
             string ClassName = "MyAwesomeObject", string FilterFieldName = "SomeFieldName", Boolean ReturnSingleton = false, Boolean GenerateInterfaceClass = true)
@@ -1691,6 +1700,8 @@ namespace CodeGenAPI.Controllers
 
         [HttpGet]
         [Route("GetSchemaOfSQLCode")]
+        [SwaggerOperation(Summary =
+            "Will take a simple Query string and return a formatted list string with FieldName - Date Type - ISIdentity Bool - AllowNull Bool each on their own line")]
         public string GetSchemaOfSQLCode(string CN = "DBwSSPI_Login",string SQLCode = "Select top 1 * from SOMETABLE")
         {
             string result = "";
