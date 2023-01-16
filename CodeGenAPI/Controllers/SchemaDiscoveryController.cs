@@ -1990,6 +1990,14 @@ namespace CodeGenAPI.Controllers
 
             result += "\n";
 
+            result += "// ===========================================================================================\n";
+            result += "// ==This snippet is the LONG FORM class definition that implements INotifyProperty Changed ==\n";
+            result += "// ==as well as Read/Write/Update/Delete functionality housed within the class itself       ==\n";
+            result += "// ===========================================================================================\n";
+            result += "\n";
+
+            result += GetTableModel(CN, TNAME);
+
             return DoTheIndentation(result);
             
         }
