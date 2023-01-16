@@ -1000,10 +1000,20 @@ namespace CodeGenAPI.Controllers
         public string GetInterfaceClassFromSpecificTableName(
             string CN = "DBwSSPI_Login", string Tname = "TNAME", string ClassName = "MyAwesomeObject")
         {
+
+            return GetInterfaceClassFromSpecificTableNameInternal(CN, Tname, ClassName, true);
+        }
+
+        private string GetInterfaceClassFromSpecificTableNameInternal(
+            string CN = "DBwSSPI_Login", string Tname = "TNAME", string ClassName = "MyAwesomeObject", Boolean DoTab = true)
+        {
             string result = "public class " + ClassName + "\n" + "{\n";
 
             string TheTabs = "\t";
-
+            
+            if (!DoTab)
+                TheTabs = "";
+            
             string SQLCode = "Select top 1 * from " + Tname;
 
             List<CodeGenAPI.Models.Field> TheFields =
@@ -1969,8 +1979,16 @@ namespace CodeGenAPI.Controllers
             result += GenerateUnPacker() + "\n\n";
             result += GenerateSupportRoutines() + "\n\n";
             result += GenerateButtonHandlers() + "\n\n";
-            
 
+            result += "// ==========================================================================================\n";
+            result += "// ==This snippet is a defined form of the Interface Class Used in the PACK() and UNPACK() ==\n";
+            result += "// ==========================================================================================\n";
+            result += "\n";
+
+
+            result += GetInterfaceClassFromSpecificTableNameInternal(CN, TNAME, TNAME,false);
+
+            result += "\n";
 
             return DoTheIndentation(result);
             
