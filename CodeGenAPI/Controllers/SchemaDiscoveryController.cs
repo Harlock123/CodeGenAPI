@@ -2034,6 +2034,38 @@ namespace CodeGenAPI.Controllers
             
         }
 
+        [HttpGet]
+        [Route("GetHTMLFormDefinitionForTable")]
+        [SwaggerOperation(Summary =
+            "Will return a collection of CSS and HTML code to script up a form for the given database entity, Will use just HTML if DoJavaScriptStuff is false ")]
+        public string GetHTMLFormDefinitionForTable(string CN = "DBwSSPI_Login", string TNAME = "MemberMain", bool DoJavaScriptStuff = true)
+        {
+            // use the call to retrieve the fields from the chosen table
+            TheFields = (List<Models.Field>)GetTableSchemaFields(CN, TNAME);
+            TableName = TNAME;
+            
+            
+            string result = "";
+            result += "// ======================================================================\n";
+            result += "// == This snippet will be for the StyleSheet Referenced               ==\n";
+            result += "// ======================================================================\n";
+            result += "\n";
+
+            result += GenerateCSSCode() + "\n\n";
+
+            result += "// ====================================================================================\n";
+            result += "// == This is the actual HTML Code generated                                         ==\n";
+            result += "// ====================================================================================\n";
+            result += "\n";
+
+            result += GenerateHTMLCode(DoJavaScriptStuff) + "\n\n";
+
+
+            return result;
+
+        }
+
+        
         #region Private Stuff
 
         private string GetTableModelForPost(
@@ -3729,6 +3761,279 @@ namespace CodeGenAPI.Controllers
             return s;
         }
 
+        #endregion
+
+        #region HTML and CSS Code Stuff
+
+         private string GenerateHTMLCode(bool JS)
+        {
+            string s = "";
+
+            string anon = "";
+
+            if (JS )
+            {
+                // Header that references the JAVASCRIPT UI and JQUERY addons
+
+                s = "<!DOCTYPE html>\n" +
+               "<html lang=\"en\">\n" +
+               "<head>\n" +
+               "\t<meta charset=\"utf-8\">\n" +
+               "\t<title>title</title>\n" +
+               "\t<link rel=\"stylesheet\" href=\"JS\\jquery-ui.min.css\">\n" +
+               "\t<link rel=\"stylesheet\" href=\"style.css\">\n" +
+               "\t<script language=\"JavaScript\" src=\"JS\\jquery-1.12.0.min.js\" ></script>\n" +
+               "\t<script language=\"JavaScript\" src=\"JS\\jquery-ui.min.js\" ></script>\n" +
+               "\t<script language=\"JavaScript\">\n"+
+               "REPLACETHISWITHANONYMOUSFUNCTION\n" +
+               "\t</script>\n" +
+               "</head>\n" +
+               "<body>\n";
+            }
+            else
+            {
+                // Generic Header for the HTML Output
+
+                s = "<!DOCTYPE html>\n" +
+                "<html lang=\"en\">\n" +
+                "<head>\n" +
+                "\t<meta charset=\"utf-8\">\n" +
+                "\t<title>title</title>\n" +
+                "\t<link rel=\"stylesheet\" href=\"style.css\">\n" +
+
+                "</head>\n" +
+                "<body>\n";
+            }
+
+            
+
+            s += "\t<div class=\"panel-frame\">\n";
+
+            foreach (Field f in TheFields)
+            {
+
+                s += "\t\t<div class=\"panel-container\" id=\"container_" + f.FieldName + "\" >\n";
+                
+                if (f.FieldType == "VARCHAR" || f.FieldType == "CHAR" || f.FieldType == "NVARCHAR" ||
+                    f.FieldType == "TEXT" || f.FieldType == "UNIQUEIDENTIFIER" || f.FieldType == "GUID" ||
+                    f.FieldType == "SYSNAME")
+                {
+
+                    if (f.MaxLength > 200 || f.MaxLength < 0)
+                    {
+                        // encode this as a large multiline field
+
+                        s += "\t\t\t<nav class=\"panel-left\">\n";
+                        s += "\t\t\t\t" + f.FieldName + "\n";
+                        s += "\t\t\t</nav>\n\n";
+
+                        s += "\t\t\t<div class=\"panel-splitter\">\n";
+                        s += "\t\t\t\t | \n";
+                        s += "\t\t\t</div>\n\n";
+
+                        s += "\t\t\t<div class=\"panel-right\">\n";
+                        s += "\t\t\t\t<textarea rows=\"4\" cols=\"50\" name=\"fld_" + f.FieldName + "\" id=\"fld_" + f.FieldName + "\"> \n";
+                        s += "\t\t\t\t</textarea>\n";
+                        s += "\t\t\t</div>\n\n";
+                    }
+                    else
+                    {
+                    //    if (f.CROSSWALKTABLE != "")
+                    //    {
+                    //        // we are coding a crosswalked Item
+
+                    //        s += "\t\t\t<nav class=\"panel-left\">\n";
+                    //        s += "\t\t\t\t" + f.FieldName + "\n";
+                    //        s += "\t\t\t</nav>\n\n";
+
+                    //        s += "\t\t\t<div class=\"panel-splitter\">\n";
+                    //        s += "\t\t\t\t | \n";
+                    //        s += "\t\t\t</div>\n\n";
+
+                    //        s += "\t\t\t<div class=\"panel-right\">\n";
+                    //        s += "\t\t\t\t<input type=\"text\" list=\"data_list_" + f.FieldName + "\" + name=\"fld_" + f.FieldName + "\" id=\"fld_" + f.FieldName + "\" /> \n";
+                    //        s += "\t\t\t</div>\n\n";
+
+                    //        // Simple dataList
+
+                    //        SqlConnection cn = new SqlConnection(DSN);
+                    //        cn.Open();
+                    //        string sql = "SELECT DISTINCT " + f.CROSSWALKVALUE + "," + f.CROSSWALKDISPLAY + " from " + f.CROSSWALKTABLE + " ORDER BY " + f.CROSSWALKDISPLAY;
+
+                    //        SqlCommand cmd = new SqlCommand(sql, cn);
+
+                    //        SqlDataReader r = cmd.ExecuteReader();
+
+                    //        s += "\t\t\t<datalist id=\"data_list_" + f.FieldName + "\">\n";
+
+                    //        while (r.Read())
+                    //        {
+                    //            s += "\t\t\t\t<option value=\"" + r[0] + "\" >" + r[1] + "</option>\n";
+                    //        }
+                    //        r.Close();
+                    //        cmd.Dispose();
+                    //        cn.Close();
+                    //        cn.Dispose();
+
+                    //        s += "\t\t\t</datalist>\n\n";
+                            
+                    //    }
+                    //    else
+                    //    {
+
+                    //        s += "\t\t\t<nav class=\"panel-left\">\n";
+                    //        s += "\t\t\t\t" + f.FieldName + "\n";
+                    //        s += "\t\t\t</nav>\n\n";
+
+                    //        s += "\t\t\t<div class=\"panel-splitter\">\n";
+                    //        s += "\t\t\t\t | \n";
+                    //        s += "\t\t\t</div>\n\n";
+
+                    //        s += "\t\t\t<div class=\"panel-right\">\n";
+                    //        s += "\t\t\t\t<input type=\"text\" maxlength=\"" + f.MaxLength.ToString() + "\" name=\"fld_" + f.FieldName + "\" id=\"fld_" + f.FieldName + "\" /> \n";
+                    //        s += "\t\t\t</div>\n\n";
+                    //    }
+                    }                  
+                    ////s += "this.txt" + f.FieldNameConverted + "  = new System.Windows.Forms.TextBox();\n";
+                }
+
+                if (f.FieldType == "INT" || f.FieldType == "SMALLINT" ||
+                   f.FieldType == "TINYINT" || f.FieldType == "BIGINT" || f.FieldType == "DECIMAL" ||
+                   f.FieldType == "DOUBLE" || f.FieldType == "MONEY" || f.FieldType == "CURRENCY" ||
+                   f.FieldType == "FLOAT")
+                {
+                    s += "\t\t\t<nav class=\"panel-left\">\n";
+                    s += "\t\t\t\t" + f.FieldName + "\n";
+                    s += "\t\t\t</nav>\n\n";
+
+                    s += "\t\t\t<div class=\"panel-splitter\">\n";
+                    s += "\t\t\t\t | \n";
+                    s += "\t\t\t</div>\n\n";
+
+                    s += "\t\t\t<div class=\"panel-right\">\n";
+                    s += "\t\t\t\t<input type=\"number\" name=\"fld_" + f.FieldName + "\" id=\"fld_" + f.FieldName + "\" /> \n";
+                    s += "\t\t\t</div>\n\n";
+
+
+                    //s += "this.txt" + f.FieldNameConverted + "  = new System.Windows.Forms.TextBox();\n";
+                }
+
+
+                if (f.FieldType == "DATETIME" || f.FieldType == "DATE" || f.FieldType == "DATETIME2" || f.FieldType == "SMALLDATE" || f.FieldType == "SMALLDATETIME")
+                {
+                    if (JS)
+                    {
+                        // Doing JQUERY UI Date Pickers
+
+                        // is the anon variable empty? if so initialize it
+
+                        if (anon == "")
+                        {
+                            anon = "\t\t$(document).ready(function() {\n";
+                        }
+
+                        s += "\t\t\t<nav class=\"panel-left\">\n";
+                        s += "\t\t\t\t" + f.FieldName + "\n";
+                        s += "\t\t\t</nav>\n\n";
+
+                        s += "\t\t\t<div class=\"panel-splitter\">\n";
+                        s += "\t\t\t\t | \n";
+                        s += "\t\t\t</div>\n\n";
+
+                        s += "\t\t\t<div class=\"panel-right\">\n";
+                        s += "\t\t\t\t<input type=\"text\" name=\"fld_" + f.FieldName + "\" id=\"fld_" + f.FieldName + "\" /> \n";
+                        s += "\t\t\t</div>\n\n";
+
+                        anon += "\t\t\t$( \"#fld_" + f.FieldName + "\" ).datepicker();\n";
+                    }
+                    else
+                    {
+                        // Doing generic Date pickers
+
+                        s += "\t\t\t<nav class=\"panel-left\">\n";
+                        s += "\t\t\t\t" + f.FieldName + "\n";
+                        s += "\t\t\t</nav>\n\n";
+
+                        s += "\t\t\t<div class=\"panel-splitter\">\n";
+                        s += "\t\t\t\t | \n";
+                        s += "\t\t\t</div>\n\n";
+
+                        s += "\t\t\t<div class=\"panel-right\">\n";
+                        s += "\t\t\t\t<input type=\"date\" name=\"fld_" + f.FieldName + "\" id=\"fld_" + f.FieldName + "\" /> \n";
+                        s += "\t\t\t</div>\n\n";
+                    }
+                    
+                    //s += "this.dtp" + f.FieldNameConverted + "  = new System.Windows.Forms.DateTimePicker();\n";
+                }
+
+                if (f.FieldType == "BOOL" || f.FieldType == "BIT")
+                {
+
+                    s += "\t\t\t<nav class=\"panel-left\">\n";
+                    s += "\t\t\t\t" + f.FieldName + "\n";
+                    s += "\t\t\t</nav>\n\n";
+
+                    s += "\t\t\t<div class=\"panel-splitter\">\n";
+                    s += "\t\t\t\t | \n";
+                    s += "\t\t\t</div>\n\n";
+
+                    s += "\t\t\t<div class=\"panel-right\">\n";
+                    s += "\t\t\t\t<input type=\"checkbox\" name=\"fld_" + f.FieldName + "\" id=\"fld_" + f.FieldName + "\" /> \n";
+                    s += "\t\t\t</div>\n\n";
+
+                    //s += "this.chk" + f.FieldNameConverted + "  = new System.Windows.Forms.CheckBox();\n";
+                }
+
+                s += "\t\t</div>\n";
+
+            }
+
+            s += "\t</div>\n" +
+                  "</body>\n" +
+                  "</html>\n";
+
+            if (JS)
+            {
+                // do some cleanup and replace the ANON placeholder with the contents of the ANON variable
+
+                anon += "\t\t});\n";
+
+                s = s.Replace("REPLACETHISWITHANONYMOUSFUNCTION", anon);
+            }
+
+            return s;
+        }
+
+        private string GenerateCSSCode()
+        {
+            string s = "";
+
+            s = ".panel-container {\n" +
+                "\tdisplay: flex;\n" +
+                "\tflex-direction: row;\n" +
+                "\tjustify-content: space-around;\n" +
+                "\tflex-wrap: nowrap;\n" +
+                "\talign-items: stretch;\n" +
+                "}\n\n" +
+
+                ".panel-left {\n" +
+                "\tflex: none;\n" +
+                "\twidth: 200px;\n" +
+                "}\n\n" +
+
+                ".panel-splitter {\n" +
+                "\tflex: none;\n" +
+                "\twidth: 20px;\n" +
+                "}\n\n" +
+
+                ".panel-right {\n" +
+                "\tflex: 1;\n" +
+                "}\n\n";
+
+            return s;
+        }
+
+        
         #endregion
         
         #region InterfaceClasses
