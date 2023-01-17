@@ -1738,6 +1738,10 @@ namespace CodeGenAPI.Controllers
 
         [HttpGet]
         [Route("GetIdentityFieldForTable")]
+        [SwaggerOperation(Summary =
+            "Will return a single string with the name of the Identity Field defined for TableName.\n" +
+            "If its a View and there is an Identity field on the base table used in the view That will\n" +
+            "be returned as the result.")]
         public string GetIdentityFieldForTable(string CN = "DBwSSPI_Login", string TableName = "SOMETABLE")
         {
             string result = "Table has no Identity Field";
@@ -1789,6 +1793,8 @@ namespace CodeGenAPI.Controllers
 
         [HttpGet]
         [Route("GetListofTablePKs")]
+        [SwaggerOperation(Summary =
+            "Will return an array of Tuples containing TableName and PkName for those tables.")]
         public List<TablesAndPKs> GetListOFTablePKs(string CN = "DBwSSPI_Login")
         {
             List<TablesAndPKs> result = new List<TablesAndPKs>();
@@ -1843,6 +1849,10 @@ namespace CodeGenAPI.Controllers
 
         [HttpGet]
         [Route("GetListOfOtherTableKeys")]
+        [SwaggerOperation(Summary =
+            "Will return a list of fields in the given table that match name and type of field in other tables in the database.\n" +
+            "This might normally be defined as a Foreign Key field but often will not be actually defined at the database level as such\n" +
+            "Still its use as such might be inferred. This INFO might prove useful in some cases.")]
         public List<OtherTableKeys> GetListOfOtherTableKeys(string CN = "DBwSSPI_Login", string TNAME = "")
         {
             List<OtherTableKeys> result = new List<OtherTableKeys>();
@@ -1872,6 +1882,10 @@ namespace CodeGenAPI.Controllers
 
         [HttpGet]
         [Route("GetFullGettersForGivenTableName")]
+        [SwaggerOperation(Summary =
+            "Will return a Lightweight Data Object and a set of HTTP GET endpoints that will return a list of those LDO's.\n" +
+            "Or a singleton LDO for primary keys defined for TNAME. It uses the GetListOfOtherKeys to return the LIST of LDO's \n" +
+            "So the resulting output might carry a LOT of code depending on the tables definition in the database.")]
         public string GetFullGettersForGivenTableName(string CN = "DBwSSPI_Login", string TNAME = "SomeTable")
         {
             string result = "";
@@ -1903,6 +1917,12 @@ namespace CodeGenAPI.Controllers
 
         [HttpGet]
         [Route("GetPOSTMethodForTable")]
+        [SwaggerOperation(Summary =
+            "Will return Code that generates a full database abstraction class for given TNAME (GENERATEDBTABLEMODEL=TRUE) as well.\n" +
+            "LDO for the table (GENERATEINTERFACECLASS = True). It will then generate a HTTP POST endpoint that will take \n" +
+            "From the BODY of the post one of those LDO's and leverage the database abstraction class to hydrate all the fields and call UPDATE()\n" +
+            "To write out the record or update the record if there is already one in the target database, Update() interprets the Primary key field\n" +
+            "to determine if an Insert or an Update gets called ")]
         public string GetPOSTMethodForTable(string CN = "DBwSSPI_Login", string TNAME = "SomeTable", Boolean GenerateInterfaceClass = true,Boolean GenerateDBTableModel = true)
         {
             string result = "";
