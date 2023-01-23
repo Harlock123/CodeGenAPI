@@ -43,6 +43,9 @@ namespace CodeGenAPI.Controllers
 
         [HttpGet]
         [Route("GetAll")]
+        [SwaggerOperation(Summary = "Will attempt to enumerate all Tables and Views and pertinate information about all those entities " +
+                                    " in the database. Returning a JSON object with the structure. " +
+                                    "On large databases this might take some time to execute and may timeout")]
         public string GetAll(string CN = "DBwSSPI_Login")
         {
             // On big databases this will likely cause timeouts and other squirrly behaiviors for tool like the CrapTacular SWAGGER
@@ -153,6 +156,7 @@ namespace CodeGenAPI.Controllers
 
         [HttpGet]
         [Route("GetTableSchema")]
+        [SwaggerOperation(Summary = "Returns the Schema of a Table or View TN as a JSON Array of Schema objects")]
         public string GetTableSchema(
             string CN = "DBwSSPI_Login",
             string TN = "MemberMain")
@@ -197,6 +201,7 @@ namespace CodeGenAPI.Controllers
 
         [HttpGet]
         [Route("GetTableSchemaFields")]
+        [SwaggerOperation(Summary = "Returns the array of Field Objects for each field in the Table or View TN ")]
         public IEnumerable<CodeGenAPI.Models.Field> GetTableSchemaFields(
             string CN = "DBwSSPI_Login",
             string TN = "MemberMain")
@@ -1006,6 +1011,7 @@ namespace CodeGenAPI.Controllers
 
         [HttpGet]
         [Route("GetInterfaceClassFromSpecificTableName")]
+        [SwaggerOperation(Summary = "Will return a Lightweight Data Object encapsulating the Schema of a supplied table or view <TNAME> the returned class will be named <ClassName>")]
         public string GetInterfaceClassFromSpecificTableName(
             string CN = "DBwSSPI_Login", string Tname = "TNAME", string ClassName = "MyAwesomeObject")
         {
