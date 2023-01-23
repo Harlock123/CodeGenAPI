@@ -869,6 +869,7 @@ namespace CodeGenAPI.Controllers
 
         [HttpGet]
         [Route("GetTableColumns")]
+        [SwaggerOperation(Summary = "Will return an array of strings containing all the columns in the supplied Tablename TN")]
         public IEnumerable<String> GetTableColumns(
             string CN = "DBwSSPI_Login",
             string TN = "MemberMain")
@@ -904,6 +905,7 @@ namespace CodeGenAPI.Controllers
         
         [HttpGet]
         [Route("GetConfiguration")]
+        [SwaggerOperation(Summary = "Will return a list of all the databases named and configured in this installations app.config. These named keywork=value pairs are used for all the other calls in the CN parameter")]
         public string GetConfiguration ()
         {
             string result = "";
@@ -923,6 +925,12 @@ namespace CodeGenAPI.Controllers
 
         [HttpGet]
         [Route("GetSchemaFieldsFromSQLCode")]
+        [SwaggerOperation(Summary = "Will return an array of objects the enumerate many characteristics " +
+                                    "of the fields resuling from the supplied query  SQLCode " +
+                                    "allowNulls, fieldName fieldNameConverted, isIdentity, maxLength, precision," +
+                                    "crosswalk, crosswalktable,crosswalkvalue,crosswalkdisplay, tablename")]    
+
+
         public IEnumerable<CodeGenAPI.Models.Field> GetSchemaFieldsFromSQLCode (
             string CN = "DBwSSPI_Login", string SQLCode = "Select top 1 * from SOMETABLE")
         {
