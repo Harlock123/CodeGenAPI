@@ -1919,11 +1919,11 @@ namespace CodeGenAPI.Controllers
 
             List<OtherTableKeys> otks = GetListOfOtherTableKeys(CN, TNAME);
 
-            result += GetGetterWebMethodFromTableName(CN, TNAME, TNAME, tpk.PKName, true, true);
+            result += GetGetterWebMethodFromTableName(CN, TNAME, "cls" + TNAME, tpk.PKName, true, true);
 
             foreach(OtherTableKeys otk in otks)
             {
-               result += GetGetterWebMethodFromTableName(CN, TNAME, TNAME, otk.PKName, false, false);
+               result += GetGetterWebMethodFromTableName(CN, TNAME, "cls" +TNAME, otk.PKName, false, false);
             }
 
             return result;
