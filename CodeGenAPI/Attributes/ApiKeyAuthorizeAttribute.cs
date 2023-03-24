@@ -4,10 +4,16 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CodeGenAPI.Attributes
 {
-	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
+    ///<Summary>
+    /// The ApiKeyAuthorizeAttribute class is used to validate the API Key
+    ///</Summary>
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
 	public class ApiKeyAuthorizeAttribute : TypeFilterAttribute
 	{
-		public ApiKeyAuthorizeAttribute() : base(typeof(ApiKeyAuthorizeAsyncFilter))
+        ///<Summary>
+        /// The ApiKeyAuthorizeAttribute constructor
+        ///</Summary>
+        public ApiKeyAuthorizeAttribute() : base(typeof(ApiKeyAuthorizeAsyncFilter))
 		{
 		}
 	}

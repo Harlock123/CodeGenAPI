@@ -1,5 +1,7 @@
 ﻿namespace CodeGenAPI;
-
+///<Summary>
+/// The WeatherForecast class is used to hold the weather forecast stub data
+///</Summary>
 public class WeatherForecast
 {
     public DateTime Date { get; set; }

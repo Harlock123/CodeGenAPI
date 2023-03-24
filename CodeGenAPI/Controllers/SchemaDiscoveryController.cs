@@ -28,6 +28,10 @@ namespace CodeGenAPI.Controllers
     using System.Data;
     using Newtonsoft.Json.Linq;
 
+
+    ///<Summary>
+    /// The SchemaDiscoveryController class is used to discover the schema of the database
+    ///</Summary>
     [Route("api/[controller]")]
     [ApiController]
     //[ApiKeyAuthorize]
@@ -41,6 +45,9 @@ namespace CodeGenAPI.Controllers
 
         List<Field> TheFields = null;
 
+        ///<Summary>
+        /// The GetAll method is used to enumerate all Tables and Views and pertinate information about all those entities
+        ///</Summary>
         [HttpGet]
         [Route("GetAll")]
         [SwaggerOperation(Summary = "Will attempt to enumerate all Tables and Views and pertinate information about all those entities " +
@@ -83,6 +90,9 @@ namespace CodeGenAPI.Controllers
             return result;
         }
 
+        ///<Summary>
+        /// The GetTables method is used to return a list of TABLE objects containing The DATABASE, The SCHEMA, The OBJECT Name, and its type (VIEW or BASE TABLE)
+        ///</Summary>
         [HttpGet]
         [Route("GetTables")]
         [SwaggerOperation(Summary = "Will Return a list of TABLE objects containing The DATABASE, The SCHEMA, The OBJECT Name, and its type (VIEW or BASE TABLE)")]
@@ -118,6 +128,9 @@ namespace CodeGenAPI.Controllers
             return result;
         }
 
+        ///<Summary>
+        /// The GetListOfTables method is used to return a list of all Tables and Views as an array of Strings with their names only
+        ///</Summary>
         [HttpGet]
         [Route("GetListOfTables")]
         [SwaggerOperation(Summary = "Returns all Tables and Views as an array of Strings with their names only")]
@@ -154,6 +167,10 @@ namespace CodeGenAPI.Controllers
             return result.ToArray();
         }
 
+
+        ///<Summary>
+        /// The GetTableSchema method is used to return the Schema of a Table or View TN as a JSON Array of Schema objects
+        ///</Summary>
         [HttpGet]
         [Route("GetTableSchema")]
         [SwaggerOperation(Summary = "Returns the Schema of a Table or View TN as a JSON Array of Schema objects")]
@@ -199,6 +216,9 @@ namespace CodeGenAPI.Controllers
             return result;
         }
 
+        ///<Summary>
+        /// The GetTableSchemaFields method is used to return the array of Field Objects for each field in the Table or View TN
+        ///</Summary>
         [HttpGet]
         [Route("GetTableSchemaFields")]
         [SwaggerOperation(Summary = "Returns the array of Field Objects for each field in the Table or View TN ")]
@@ -322,6 +342,9 @@ namespace CodeGenAPI.Controllers
 
         }
 
+        ///<Summary>
+        /// The GetTableModel method is used to return the code to encapsulate reading, writing, updating and deleting records from the indicated TableName
+        ///</Summary>
         [HttpGet]
         [Route("GetTableModel")]
         [SwaggerOperation(Summary = "Creates code to encapsulate reading, writing, updating and deleting records from the indicated TableName")]
@@ -872,6 +895,9 @@ namespace CodeGenAPI.Controllers
             return DoTheIndentation(result);
         }
 
+        ///<Summary>
+        /// The GetTableColumns method will return an array of strings containing all the columns in the supplied Tablename TN
+        ///</Summary>
         [HttpGet]
         [Route("GetTableColumns")]
         [SwaggerOperation(Summary = "Will return an array of strings containing all the columns in the supplied Tablename TN")]
@@ -907,7 +933,10 @@ namespace CodeGenAPI.Controllers
 
             return result;
         }
-        
+
+        ///<Summary>
+        /// The GetConfiguration method will return a list of all the databases named and configured in this installations app.config. These named keywork=value pairs are used for all the other calls in the CN parameter
+        ///</Summary>
         [HttpGet]
         [Route("GetConfiguration")]
         [SwaggerOperation(Summary = "Will return a list of all the databases named and configured in this installations app.config. These named keywork=value pairs are used for all the other calls in the CN parameter")]
@@ -928,6 +957,9 @@ namespace CodeGenAPI.Controllers
 
         }
 
+        ///<Summary>
+        /// The GetSchemaFieldsFromSQLCode method will return an array of objects the enumerate many characteristics of the fields resuling from the supplied query  SQLCode allowNulls, fieldName fieldNameConverted, isIdentity, maxLength, precision,crosswalk, crosswalktable,crosswalkvalue,crosswalkdisplay, tablename
+        ///</Summary>
         [HttpGet]
         [Route("GetSchemaFieldsFromSQLCode")]
         [SwaggerOperation(Summary = "Will return an array of objects the enumerate many characteristics " +
@@ -981,6 +1013,10 @@ namespace CodeGenAPI.Controllers
             return result;
         }
 
+
+        ///<Summary>
+        /// The GetInterfaceClassFromSQLCode method will return a Lightweight Data Object encapsulating the Scheme of a supplied query against the database LDO Will be named <ClassName>
+        ///</Summary>
         [HttpGet]
         [Route("GetInterfaceClassFromSQLCode")]
         [SwaggerOperation(Summary = "Will return a Lightweight Data Object encapsulating the Scheme of a supplied query against the database LDO Will be named <ClassName>")]
@@ -1009,6 +1045,10 @@ namespace CodeGenAPI.Controllers
             return result;
         }
 
+
+        ///<Summary>
+        /// The GetInterfaceClassFromSpecificTableName method will return a Lightweight Data Object encapsulating the Schema of a supplied table or view <TNAME> the returned class will be named <ClassName>
+        ///</Summary>
         [HttpGet]
         [Route("GetInterfaceClassFromSpecificTableName")]
         [SwaggerOperation(Summary = "Will return a Lightweight Data Object encapsulating the Schema of a supplied table or view <TNAME> the returned class will be named <ClassName>")]
@@ -1049,6 +1089,9 @@ namespace CodeGenAPI.Controllers
             return result;
         }
 
+        ///<Summary>
+        /// The GetAllTablesInterfaceClassesFromDataBase method will return a Lightweight Data Object encapsulating the Schema of each table and view in the target database
+        ///</Summary>
         [HttpGet]
         [Route("GetAllTablesInterfaceClassesFromDataBase")]
         [SwaggerOperation(Summary = "Will retrieve Lightweight Data Object classes for each table and View in the target database")]
@@ -1069,6 +1112,9 @@ namespace CodeGenAPI.Controllers
             return result.ToString();
         }
 
+        ///<Summary>
+        /// The GetGetterWebMethodFromSQLCode method will return a Lightweight Data Object encapsulating the Schema of a supplied query against the database LDO Will be named <ClassName>
+        ///</Summary>
         [HttpGet]
         [Route("GetGetterWebMethodFromSQLCode")]
         [SwaggerOperation(Summary = "Given a specific Query SQLCode\n" + 
@@ -1383,6 +1429,9 @@ namespace CodeGenAPI.Controllers
             return result;
         }
 
+        ///<Summary>
+        /// The GetGetterWebMethodFromTableName method will return a restful endpoint code that will return a lightweight data object named Classname if GenerateInterfaceClass if True, as well as a restful endpoint code that will return as List<ClassName> or a single ClassName object. Dependant on returnsingleton
+        ///</Summary>
         [HttpGet]
         [Route("GetGetterWebMethodFromTableName")]
         [SwaggerOperation(Summary = "Given a TableName TNAME\n" +
