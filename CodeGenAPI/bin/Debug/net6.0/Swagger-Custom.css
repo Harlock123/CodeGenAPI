@@ -1,0 +1,9 @@
+﻿body {
+}
+
+.swagger-ui .parameters input[type="text"],
+.swagger-ui .parameters textarea {
+    height: 100px;
+    width: 400px;
+}
+
