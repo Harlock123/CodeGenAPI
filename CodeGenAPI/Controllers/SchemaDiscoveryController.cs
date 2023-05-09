@@ -1256,7 +1256,7 @@ namespace CodeGenAPI.Controllers
                         }
                     }
 
-                    if (f.FieldType.ToLower().EndsWith("decimal"))
+                    if (f.FieldType.ToLower().EndsWith("decimal") || f.FieldType.ToLower().EndsWith("double"))
                     {
                         if (f.AllowNulls)
                         {
@@ -1383,7 +1383,7 @@ namespace CodeGenAPI.Controllers
                         }
                     }
 
-                    if (f.FieldType.ToLower().EndsWith("decimal"))
+                    if (f.FieldType.ToLower().EndsWith("decimal") || f.FieldType.ToLower().EndsWith("double"))
                     {
                         if (f.AllowNulls)
                         {
@@ -1588,7 +1588,7 @@ namespace CodeGenAPI.Controllers
                         }
                     }
 
-                    if (f.FieldType.ToLower().EndsWith("decimal"))
+                    if (f.FieldType.ToLower().EndsWith("decimal") || f.FieldType.ToLower().EndsWith("double"))
                     {
                         if (f.AllowNulls)
                         {
@@ -1715,7 +1715,7 @@ namespace CodeGenAPI.Controllers
                         }
                     }
 
-                    if (f.FieldType.ToLower().EndsWith("decimal"))
+                    if (f.FieldType.ToLower().EndsWith("decimal") || f.FieldType.ToLower().EndsWith("double"))
                     {
                         if (f.AllowNulls)
                         {
