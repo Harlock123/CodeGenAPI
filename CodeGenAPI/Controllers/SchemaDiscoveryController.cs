@@ -1123,7 +1123,8 @@ namespace CodeGenAPI.Controllers
                                     "as List<ClassName> or a single ClassName object. Dependant on returnsingleton")]
         public string GetGetterWebMethodFromSQLCode(
             string CN = "DBwSSPI_Login", string SQLCode = "Select top 1 * from SOMETABLE", 
-            string ClassName = "MyAwesomeObject", string FilterFieldName = "SomeFieldName", Boolean ReturnSingleton = false)
+            string ClassName = "MyAwesomeObject", string FilterFieldName = "SomeFieldName", Boolean ReturnSingleton = false,
+            Boolean MakeItAsync = false)
            
         {
             string result = GetInterfaceClassFromSQLCode(CN, SQLCode, ClassName);
@@ -1176,8 +1177,21 @@ namespace CodeGenAPI.Controllers
             {
                 result += "[HttpGet]\n";
                 result += "[Route(\"Get" + ClassName + "\")]\n";
-                result += "public " + ClassName + " Get" + ClassName + " (" + filterfieldtype + " filt " + ")\n";
-                result += "{\n";
+
+                if (MakeItAsync)
+                {
+                    result += "public async Task<" + ClassName + "> Get" + ClassName + "async (" + filterfieldtype + " filt " + ")\n";
+                    result += "{\n";
+                    result += Tabify(1) + "return await Task.Run(() => {\n";
+                }
+                else
+                {
+                    result += "public " + ClassName + " Get" + ClassName + " (" + filterfieldtype + " filt " + ")\n";
+                    result += "{\n";
+                }
+
+                //result += "public " + ClassName + " Get" + ClassName + " (" + filterfieldtype + " filt " + ")\n";
+                //result += "{\n";
                 result += Tabify(1) + ClassName + " result = new " + ClassName + "();\n";
                 result += Tabify(1) + "using (SqlConnection cn = new SqlConnection(\"" + FetchActualConnectionString(CN) + "\"))\n";
                 result += Tabify(1) + "{\n";
@@ -1297,14 +1311,32 @@ namespace CodeGenAPI.Controllers
 
                 result += Tabify(1) + "return result;\n";
 
+                if (MakeItAsync)
+                {
+                    result += Tabify(1) + "});\n";
+                }
+
                 result += "} // End of GETTER\n";
             }
             else
             {
                 result += "[HttpGet]\n";
                 result += "[Route(\"GetListOf" + ClassName + "\")]\n";
-                result += "public List<" + ClassName + "> GetListOf" + ClassName + " (" + filterfieldtype + " filt " + ")\n";
-                result += "{\n";
+
+                if (MakeItAsync)
+                {
+                    result += "public async Task<List<" + ClassName + ">> GetListOf" + ClassName + "async (" + filterfieldtype + " filt " + ")\n";
+                    result += "{\n";
+                    result += Tabify(1) + "return await Task.Run(() => {\n";
+                }
+                else
+                {
+                    result += "public List<" + ClassName + "> GetListOf" + ClassName + " (" + filterfieldtype + " filt " + ")\n";
+                    result += "{\n";
+                }
+
+                //result += "public List<" + ClassName + "> GetListOf" + ClassName + " (" + filterfieldtype + " filt " + ")\n";
+                //result += "{\n";
                 result += Tabify(1) + "List<" + ClassName + "> result = new List<" + ClassName + ">();\n";
                 result += Tabify(1) + "using (SqlConnection cn = new SqlConnection(\"" + FetchActualConnectionString(CN) + "\"))\n";
                 result += Tabify(1) + "{\n";
@@ -1423,6 +1455,11 @@ namespace CodeGenAPI.Controllers
                 result += Tabify(1) + "} // End of Using (SqlConnection \n";
 
                 result += Tabify(1) + "return result;\n";
+
+                if (MakeItAsync)
+                {
+                    result += Tabify(1) + "});\n";
+                }
 
                 result += "} // End of GETTER\n";
             }
