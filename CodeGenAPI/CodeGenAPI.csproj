@@ -40,4 +40,9 @@
     <Folder Include="Filters\" />
     <Folder Include="Services\" />
   </ItemGroup>
+  <ItemGroup>
+    <Reference Include="SQL_Formatter">
+      <HintPath>SupportDLLs\SQL_Formatter.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 </Project>

@@ -2128,7 +2128,24 @@ namespace CodeGenAPI.Controllers
 
         }
 
-        
+        [HttpGet]
+        [Route("MakeSQLUglyPretty")]
+        [SwaggerOperation(Summary =
+                       "Will Return a pretty SQL stanza for a supplied UGLY SQL Code Snippet ")]
+        public string MakeSQLUglyPretty(string UGLYSQL)
+        {
+            string result = "";
+
+            SQL_Formatter.Formatter formatter = new SQL_Formatter.Formatter();
+
+            string opts = "LeadingCommas=False;LeadingJoins=True;RemoveComments=False";
+
+            result = formatter.Format(UGLYSQL, opts);
+           
+            return result;
+        }
+
+
         #region Private Stuff
 
         private string GetTableModelForPost(
