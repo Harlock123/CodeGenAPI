@@ -167,7 +167,6 @@ namespace CodeGenAPI.Controllers
             return result.ToArray();
         }
 
-
         ///<Summary>
         /// The GetTableSchema method is used to return the Schema of a Table or View TN as a JSON Array of Schema objects
         ///</Summary>
@@ -966,8 +965,6 @@ namespace CodeGenAPI.Controllers
                                     "of the fields resuling from the supplied query  SQLCode " +
                                     "allowNulls, fieldName fieldNameConverted, isIdentity, maxLength, precision," +
                                     "crosswalk, crosswalktable,crosswalkvalue,crosswalkdisplay, tablename")]    
-
-
         public IEnumerable<CodeGenAPI.Models.Field> GetSchemaFieldsFromSQLCode (
             string CN = "DBwSSPI_Login", string SQLCode = "Select top 1 * from SOMETABLE")
         {
@@ -1012,7 +1009,6 @@ namespace CodeGenAPI.Controllers
 
             return result;
         }
-
 
         ///<Summary>
         /// The GetInterfaceClassFromSQLCode method will return a Lightweight Data Object encapsulating the Scheme of a supplied query against the database LDO Will be named <ClassName>
@@ -1125,7 +1121,6 @@ namespace CodeGenAPI.Controllers
             string CN = "DBwSSPI_Login", string SQLCode = "Select top 1 * from SOMETABLE", 
             string ClassName = "MyAwesomeObject", string FilterFieldName = "SomeFieldName", Boolean ReturnSingleton = false,
             Boolean MakeItAsync = false)
-           
         {
             string result = GetInterfaceClassFromSQLCode(CN, SQLCode, ClassName);
                                     
@@ -1478,7 +1473,6 @@ namespace CodeGenAPI.Controllers
         public string GetGetterWebMethodFromTableName(
             string CN = "DBwSSPI_Login", string TNAME = "TNAME",
             string ClassName = "MyAwesomeObject", string FilterFieldName = "SomeFieldName", Boolean ReturnSingleton = false, Boolean GenerateInterfaceClass = true)
-
         {
             string SQLCode = "Select * from " + TNAME;
 
@@ -1797,7 +1791,6 @@ namespace CodeGenAPI.Controllers
             }
             return result;
         }
-
 
         [HttpGet]
         [Route("GetSchemaOfSQLCode")]
@@ -2735,6 +2728,21 @@ namespace CodeGenAPI.Controllers
 
         private string FetchActualConnectionString(string TheKey)
         {
+            if (TheKey.Trim().ToUpper().StartsWith("SERVER"))
+            {
+                return TheKey;
+            }
+            
+            if (TheKey.Trim().ToUpper().StartsWith("DSN"))
+            {
+                return TheKey;
+            }
+            
+            if (TheKey.Trim().ToUpper().StartsWith("DATA SOURCE"))
+            {
+                return TheKey;
+            }
+            
             string result = "";
             var _config = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
 
