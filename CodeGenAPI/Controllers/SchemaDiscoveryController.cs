@@ -1100,8 +1100,23 @@ namespace CodeGenAPI.Controllers
 
             foreach(string TableName in TheTables)
             {
-                result.Append(GetInterfaceClassFromSQLCode(CN, "SELECT TOP 1 * from [" + TableName + "]", "cls" + TableName));
-                result.Append(System.Environment.NewLine);
+
+                try
+                {
+                    result.Append(GetInterfaceClassFromSQLCode(CN, "SELECT TOP 1 * from [" + TableName + "]", "cls" + TableName));
+                
+                    result.Append(System.Environment.NewLine);
+                }
+                catch (Exception e)
+                {
+                    result.Append("/*\n");
+                    result.Append(e.Message);
+                    result.Append("\n*/\n");
+                }
+                
+                //result.Append(GetInterfaceClassFromSQLCode(CN, "SELECT TOP 1 * from [" + TableName + "]", "cls" + TableName));
+                
+                //result.Append(System.Environment.NewLine);
             }
 
 
