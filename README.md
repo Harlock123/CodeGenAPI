@@ -14,6 +14,12 @@ connection string to the database.
 This can be a connection string or a name of a connection string in the appsettings.json file.  
 (It looks for the supplied parameter starting with the typical bits of a full connection string. Otherwise it will try to find named connection string in the app settings file)
 
+A Typical usage of the API through the Swagger Interface
+After Clicking on the Try It Out button, you can enter the connection string and click Execute.  
+![](Images/ScreenShot4.png)
+Yielding the following results
+![](Images/ScreenShot5.png)
+
 
 
 # Notes
