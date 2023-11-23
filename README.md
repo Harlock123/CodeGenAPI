@@ -10,9 +10,9 @@ Example of the API in action
 ![](Images/ScreenShot3.png)
 
 Most of the endpoints look for a parameter that represents the
-connection string to the database.
-This can be a connection string or a name of a connection string in the
-appsettings.json file. (It looks for the supplied parameter starting with the typical bits of a full connection string. Otherwise it will try to find named connection string in the app settings file)
+connection string to the database.  
+This can be a connection string or a name of a connection string in the appsettings.json file.  
+(It looks for the supplied parameter starting with the typical bits of a full connection string. Otherwise it will try to find named connection string in the app settings file)
 
 
 
