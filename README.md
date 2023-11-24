@@ -12,6 +12,14 @@ Example of the API in action
 Most of the endpoints look for a parameter that represents the
 connection string to the database.  
 This can be a connection string or a name of a connection string in the appsettings.json file.  
+
+    "Settings": {  
+        "Databases": {
+            "DBwSQL_Login":"Data Source=(LOCAL); Initial Catalog=OPENCUDmFULL; User ID=sa; Password=P@ssw0rd",
+            "DBwSSPI_Login": "Data Source=(LOCAL); Initial Catalog=OPENCUDmFULL; integrated security = SSPI"
+        }
+    }
+
 (It looks for the supplied parameter starting with the typical bits of a full connection string. Otherwise it will try to find named connection string in the app settings file)
 
 A Typical usage of the API through the Swagger Interface
@@ -20,6 +28,7 @@ After Clicking on the Try It Out button, you can enter the connection string and
 Yielding the following results
 ![](Images/ScreenShot5.png)
 
+Which as the name of that particular endpoint implies, return a json array of the table and view names in the supplied database connection.  
 
 
 # Notes
