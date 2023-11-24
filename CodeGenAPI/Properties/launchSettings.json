@@ -24,6 +24,7 @@
       "launchBrowser": true,
       "launchUrl": "swagger",
       "environmentVariables": {
+        "MaxUrlLength": "31768",
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     }

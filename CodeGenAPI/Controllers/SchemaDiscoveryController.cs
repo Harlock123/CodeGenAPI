@@ -1,8 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.SqlServer.Management.Smo;
+using Microsoft.SqlServer.Management.Sdk.Sfc;
+using System.Text;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.SqlServer.Management.Common;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -2176,7 +2182,7 @@ namespace CodeGenAPI.Controllers
         [HttpGet]
         [Route("MakeSQLUglyPretty")]
         [SwaggerOperation(Summary =
-                       "Will Return a pretty SQL stanza for a supplied UGLY SQL Code Snippet ")]
+                       "Will Return a pretty SQL stanza for a supplied UGLY SQL Code Snippet. This is highly subject to content length restrictions. Thus is not really usable for BIG stuff")]
         public string MakeSQLUglyPretty(string UGLYSQL)
         {
             string result = "";
@@ -2191,6 +2197,59 @@ namespace CodeGenAPI.Controllers
         }
 
 
+        [HttpGet]
+        [Route("GetCreateScript")]
+        [SwaggerOperation(Summary =
+            "Will Return a SQL Script that will create the table in the database ")]
+        public string GetCreateScript(string CN = "DBwSSPI_Login", string TNAME = "MemberMain")
+        {
+            string result = "";
+            
+            CN = FetchActualConnectionString(CN);
+            
+            // Parse the connection string to retrieve the database name
+            var builder = new SqlConnectionStringBuilder(CN);
+            string databaseName = builder.InitialCatalog;
+
+            // Set up a connection to the SQL Server using the connection string
+            ServerConnection serverConnection = new ServerConnection(new Microsoft.Data.SqlClient.SqlConnection(CN));
+            Server server = new Server(serverConnection);
+
+            // Connect to the specified database
+            Database database = server.Databases[databaseName];
+            
+            // Get the table by name
+            Table table = database.Tables[TNAME];
+
+            if (table == null)
+            {
+                result = $"Table '{TNAME}' not found in database '{databaseName}'.";
+                return result;
+            }
+
+            // Generate the Create Table script
+            ScriptingOptions options = new ScriptingOptions
+            {
+                ScriptDrops = false,  // Set to true if you want to include DROP TABLE statements
+                IncludeHeaders = true,
+                ClusteredIndexes = true,  // Set to false if you don't want to include clustered indexes
+                NonClusteredIndexes = true,  // Set to false if you don't want to include non-clustered indexes
+            };
+
+            StringBuilder script = new StringBuilder();
+            StringCollection scriptCollection = table.Script(options);
+
+            foreach (string line in scriptCollection)
+            {
+                script.AppendLine(line);
+            }
+
+            return script.ToString();
+            
+            //return result;
+        }
+        
+        
         #region Private Stuff
 
         private string GetTableModelForPost(
@@ -4194,5 +4253,25 @@ namespace CodeGenAPI.Controllers
         public string TableName { get; set; } = "";
         public string PKName { get; set; } = "";
     }
+    
+    public class PlainTextModelBinder : IModelBinder
+    {
+        public Task BindModelAsync(ModelBindingContext bindingContext)
+        {
+            if (bindingContext == null)
+            {
+                throw new ArgumentNullException(nameof(bindingContext));
+            }
+
+            // Read the request body as plain text
+            var reader = new StreamReader(bindingContext.HttpContext.Request.Body);
+            var text = reader.ReadToEnd();
+
+            // Set the result as a string
+            bindingContext.Result = ModelBindingResult.Success(text);
+            return Task.CompletedTask;
+        }
+    }
+    
 }
 
