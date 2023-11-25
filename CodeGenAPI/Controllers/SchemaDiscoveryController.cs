@@ -8,6 +8,7 @@ using Microsoft.SqlServer.Management.Smo;
 using Microsoft.SqlServer.Management.Sdk.Sfc;
 using System.Text;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.Extensions.Options;
 using Microsoft.SqlServer.Management.Common;
 
 // For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -2200,8 +2201,8 @@ namespace CodeGenAPI.Controllers
         [HttpGet]
         [Route("GetCreateScript")]
         [SwaggerOperation(Summary =
-            "Will Return a SQL Script that will create the table in the database ")]
-        public string GetCreateScript(string CN = "DBwSSPI_Login", string TNAME = "MemberMain")
+            "Will Return a SQL Script that will create the table or a view in the database ")]
+        public string GetCreateScript(string CN = "DBwSSPI_Login", string TNAME = "MemberMain", bool ScriptIndexes = true)
         {
             string result = "";
             
@@ -2223,8 +2224,32 @@ namespace CodeGenAPI.Controllers
 
             if (table == null)
             {
-                result = $"Table '{TNAME}' not found in database '{databaseName}'.";
-                return result;
+                // see if the supplied table name is actually a View
+                View view = database.Views[TNAME];
+
+                if (view == null)
+                {
+                    // The table or view does not exist
+                    result = $"Table or View '{TNAME}' not found in database '{databaseName}'.";
+                    return result;
+                }
+                
+                ScriptingOptions voptions = new ScriptingOptions
+                {
+                    ScriptDrops = false,  // Set to true if you want to include DROP VIEW statements
+                    IncludeHeaders = true,
+                };
+
+                StringBuilder vscript = new StringBuilder();
+                StringCollection vscriptCollection = view.Script(voptions);
+
+                foreach (string line in vscriptCollection)
+                {
+                    vscript.AppendLine(line);
+                    vscript.AppendLine("GO");
+                }
+
+                return vscript.ToString();
             }
 
             // Generate the Create Table script
@@ -2232,10 +2257,11 @@ namespace CodeGenAPI.Controllers
             {
                 ScriptDrops = false,  // Set to true if you want to include DROP TABLE statements
                 IncludeHeaders = true,
-                ClusteredIndexes = true,  // Set to false if you don't want to include clustered indexes
-                NonClusteredIndexes = true,  // Set to false if you don't want to include non-clustered indexes
+                ClusteredIndexes = ScriptIndexes,  // Set to false if you don't want to include clustered indexes
+                NonClusteredIndexes = ScriptIndexes,  // Set to false if you don't want to include non-clustered indexes
+                
             };
-
+            
             StringBuilder script = new StringBuilder();
             StringCollection scriptCollection = table.Script(options);
 
