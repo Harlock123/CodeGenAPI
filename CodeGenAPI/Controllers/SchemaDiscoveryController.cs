@@ -2181,6 +2181,74 @@ namespace CodeGenAPI.Controllers
         }
 
         [HttpGet]
+        [Route("GetXAMLFormDefinitionForSQLResult")]
+        [SwaggerOperation(Summary =
+            "Will return a Grid XAML Snippet for the given SQL Code Snippet. The SQL Snippet is subject to content length restrictions. Thus is not really usable for BIG stuff. The Resuting XAML will be a grid with the columns defined by the SQL Snippet. Easily copied and pasted into a container on a XAML usercontrol or window.")]
+        public string GetXAMLFormDefinitionForSQLResult(string CN = "DBwSSPI_Login", string SQLCode = "Select top 1 * from SOMETABLE")
+        {
+            //string result = "";
+            
+            CN = FetchActualConnectionString(CN);
+            
+            List<Field> theFieldsList = (List<Field>)GetSchemaFieldsFromSQLCode(CN, SQLCode);
+
+            StringBuilder xaml = new StringBuilder();
+            xaml.AppendLine("<Grid>");
+            xaml.AppendLine("    <Grid.ColumnDefinitions>");
+            xaml.AppendLine("        <ColumnDefinition Width=\"Auto\"/>");
+            xaml.AppendLine("        <ColumnDefinition Width=\"*\"/>");
+            xaml.AppendLine("    </Grid.ColumnDefinitions>");
+            xaml.AppendLine("    <Grid.RowDefinitions>");
+
+            int rowIndex = 0;
+
+            foreach (var item in theFieldsList)
+            {
+                xaml.AppendLine($"        <RowDefinition Height=\"Auto\"/>");
+                rowIndex++;
+            }
+            
+            xaml.AppendLine("    </Grid.RowDefinitions>");
+
+            rowIndex = 0;
+
+            foreach (var item in theFieldsList)
+            {
+                xaml.AppendLine($"    <TextBlock Text=\"{item.FieldName}\" Grid.Row=\"{rowIndex}\" Grid.Column=\"0\" VerticalAlignment=\"Center\" Margin=\"5\"/>");
+
+                if (item.FieldType == typeof(bool).ToString())
+                {
+                    xaml.AppendLine($"    <CheckBox Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"{item.FieldName}\" Margin=\"5\"/>");
+                }
+                else if (item.FieldType == typeof(DateTime).ToString())
+                {
+                    xaml.AppendLine($"    <DatePicker Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"{item.FieldName}\" Margin=\"5\"/>");
+                }
+                else if (item.FieldType == typeof(string).ToString())
+                {
+                    xaml.AppendLine($"    <TextBox Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"{item.FieldName}\" Margin=\"5\"/>");
+                }
+                else if (item.FieldType == typeof(Int128).ToString() ||
+                         item.FieldType == typeof(Int64).ToString() ||
+                         item.FieldType == typeof(Int32).ToString() ||
+                         item.FieldType == typeof(Int16).ToString() ||
+                         item.FieldType == typeof(UInt128).ToString() ||
+                         item.FieldType == typeof(UInt64).ToString() ||
+                         item.FieldType == typeof(UInt32).ToString() ||
+                         item.FieldType == typeof(UInt16).ToString())
+                {
+                    xaml.AppendLine($"    <TextBox Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"{item.FieldName}\" Margin=\"5\" Width=\"150\" HorizontalAlignment= \"Left\" />");
+                }
+                // Add more cases for other data types as needed
+
+                rowIndex++;
+            }
+
+            xaml.AppendLine("</Grid>");
+            return xaml.ToString();
+        }
+
+        [HttpGet]
         [Route("MakeSQLUglyPretty")]
         [SwaggerOperation(Summary =
                        "Will Return a pretty SQL stanza for a supplied UGLY SQL Code Snippet. This is highly subject to content length restrictions. Thus is not really usable for BIG stuff")]
@@ -2196,8 +2264,7 @@ namespace CodeGenAPI.Controllers
            
             return result;
         }
-
-
+        
         [HttpGet]
         [Route("GetCreateScript")]
         [SwaggerOperation(Summary =
