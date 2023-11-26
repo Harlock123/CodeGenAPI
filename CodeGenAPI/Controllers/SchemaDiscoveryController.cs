@@ -2239,6 +2239,20 @@ namespace CodeGenAPI.Controllers
                 {
                     xaml.AppendLine($"    <TextBox Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"{item.FieldName}\" Margin=\"5\" Width=\"150\" HorizontalAlignment= \"Left\" />");
                 }
+                else if (item.FieldType == typeof(decimal).ToString() ||
+                         item.FieldType == typeof(double).ToString() ||
+                         item.FieldType == typeof(float).ToString())
+                {
+                    xaml.AppendLine($"    <TextBox Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"{item.FieldName}\" Margin=\"5\" Width=\"200\" HorizontalAlignment= \"Left\" />");
+                }
+                else if (item.FieldType == typeof(byte[]).ToString())
+                {
+                    xaml.AppendLine($"    <TextBox Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"{item.FieldName}\" Margin=\"5\" Width=\"150\" HorizontalAlignment= \"Left\" />");
+                }
+                else
+                {
+                    xaml.AppendLine($"    <TextBox Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"{item.FieldName}\" Margin=\"5\" Width=\"300\" HorizontalAlignment= \"Left\" />");
+                }
                 // Add more cases for other data types as needed
 
                 rowIndex++;
@@ -2248,6 +2262,36 @@ namespace CodeGenAPI.Controllers
             return xaml.ToString();
         }
 
+        [HttpGet]
+        [Route("GetXAMLFormDefinitionForSQLResultInAWindow")]
+        [SwaggerOperation(Summary =
+            "Will return a Grid XAML Snippet for the given SQL Code Snippet Wrapped within a XAML Window object. The SQL Snippet is subject to content length restrictions. Thus is not really usable for BIG stuff. The Resuting XAML will be a grid with the columns defined by the SQL Snippet. Easily copied and pasted into a container on a XAML usercontrol or window.")]
+        public string GetXAMLFormDefinitionForSQLResultInAWindow(string CN = "DBwSSPI_Login", string SQLCode = "Select top 1 * from SOMETABLE",
+            string WindowTitle = "Window Title Goes Here", string WindowWidth = "800", string WindowHeight = "500",
+            string WindowXAMLClassName = "clsXAMLWindow", string WindowXAMLNameSpace = "MyNameSpace", bool WrapInAScrollViewer = true)
+        {
+            string Preample = "";
+            Preample += $"<Window xmlns=\"https://github.com/avaloniaui\"\n" +
+                        $"        xmlns:x=\"http://schemas.microsoft.com/winfx/2006/xaml\"\n" +
+                        $"        xmlns:d=\"http://schemas.microsoft.com/expression/blend/2008\"\n" +
+                        $"        xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\"\n" +
+                        $"        mc:Ignorable=\"d\" d:DesignWidth=\"{WindowWidth}\" d:DesignHeight=\"{WindowHeight}\"\n" +
+                        $"        x:Class=\"{WindowXAMLNameSpace}.{WindowXAMLClassName}\"\n" +
+                        $"        Title=\"{WindowTitle}\">\n\n";
+            
+            string Postamble = "</Window>";
+            
+            if (WrapInAScrollViewer)
+            {
+                Preample += "<ScrollViewer>\n";
+                Postamble = "</ScrollViewer>\n</Window>";
+            }
+            
+            string xaml = GetXAMLFormDefinitionForSQLResult(CN, SQLCode);
+            return Preample + xaml.ToString() + "\n" + Postamble;
+        }
+
+        
         [HttpGet]
         [Route("MakeSQLUglyPretty")]
         [SwaggerOperation(Summary =
