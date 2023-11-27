@@ -2218,15 +2218,15 @@ namespace CodeGenAPI.Controllers
 
                 if (item.FieldType == typeof(bool).ToString())
                 {
-                    xaml.AppendLine($"    <CheckBox Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"{item.FieldName}\" Margin=\"5\"/>");
+                    xaml.AppendLine($"    <CheckBox Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"chk{item.FieldName}\" Margin=\"5\"/>");
                 }
                 else if (item.FieldType == typeof(DateTime).ToString())
                 {
-                    xaml.AppendLine($"    <DatePicker Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"{item.FieldName}\" Margin=\"5\"/>");
+                    xaml.AppendLine($"    <DatePicker Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"dtp{item.FieldName}\" Margin=\"5\"/>");
                 }
                 else if (item.FieldType == typeof(string).ToString())
                 {
-                    xaml.AppendLine($"    <TextBox Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"{item.FieldName}\" Margin=\"5\"/>");
+                    xaml.AppendLine($"    <TextBox Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"txt{item.FieldName}\" Margin=\"5\"/>");
                 }
                 else if (item.FieldType == typeof(Int128).ToString() ||
                          item.FieldType == typeof(Int64).ToString() ||
@@ -2237,21 +2237,21 @@ namespace CodeGenAPI.Controllers
                          item.FieldType == typeof(UInt32).ToString() ||
                          item.FieldType == typeof(UInt16).ToString())
                 {
-                    xaml.AppendLine($"    <TextBox Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"{item.FieldName}\" Margin=\"5\" Width=\"150\" HorizontalAlignment= \"Left\" />");
+                    xaml.AppendLine($"    <TextBox Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"int{item.FieldName}\" Margin=\"5\" Width=\"150\" HorizontalAlignment= \"Left\" />");
                 }
                 else if (item.FieldType == typeof(decimal).ToString() ||
                          item.FieldType == typeof(double).ToString() ||
                          item.FieldType == typeof(float).ToString())
                 {
-                    xaml.AppendLine($"    <TextBox Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"{item.FieldName}\" Margin=\"5\" Width=\"200\" HorizontalAlignment= \"Left\" />");
+                    xaml.AppendLine($"    <TextBox Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"long{item.FieldName}\" Margin=\"5\" Width=\"200\" HorizontalAlignment= \"Left\" />");
                 }
                 else if (item.FieldType == typeof(byte[]).ToString())
                 {
-                    xaml.AppendLine($"    <TextBox Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"{item.FieldName}\" Margin=\"5\" Width=\"150\" HorizontalAlignment= \"Left\" />");
+                    xaml.AppendLine($"    <TextBox Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"btyearray{item.FieldName}\" Margin=\"5\" Width=\"150\" HorizontalAlignment= \"Left\" />");
                 }
                 else
                 {
-                    xaml.AppendLine($"    <TextBox Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"{item.FieldName}\" Margin=\"5\" Width=\"300\" HorizontalAlignment= \"Left\" />");
+                    xaml.AppendLine($"    <TextBox Grid.Row=\"{rowIndex}\" Grid.Column=\"1\" Name=\"unknown{item.FieldName}\" Margin=\"5\" Width=\"300\" HorizontalAlignment= \"Left\" />");
                 }
                 // Add more cases for other data types as needed
 
