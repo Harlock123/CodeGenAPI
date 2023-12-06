@@ -2180,6 +2180,16 @@ namespace CodeGenAPI.Controllers
 
         }
 
+        // This method dynamically generates a XAML form definition by executing a SQL command and inspecting its result set schema.
+        // The UI is represented in XAML and includes different controls (TextBox, CheckBox, DatePicker) for each field in the data schema.
+        // It initializes basic Grid layout in XAML with two columns (first for field names, second for data entry controls).
+        // For each field in the schema:
+        //     - Appends a XAML TextBlock with field name to the first column of the grid.
+        //     - Determines the .NET type equivalent of the field.
+        //     - Based on the type of the field, it appends a corresponding XAML control to the second column in the Grid.
+        //     - If the type doesn't match any of the specific cases, it defaults to creating a TextBox.
+        //     - It increments a row index so the next control can go in the correct place.
+        // The final XAML string is returned representing a UI form ready for WPF or UWP application, populates each UI control with corresponding field name.
         [HttpGet]
         [Route("GetXAMLFormDefinitionForSQLResult")]
         [SwaggerOperation(Summary =
@@ -2262,6 +2272,10 @@ namespace CodeGenAPI.Controllers
             return xaml.ToString();
         }
 
+        // This will wrap a call to the GetXAMLFormDefinitionForSQLResult() method in a XAML Window object.
+        // The resulting XAML will be a Window with a Grid containing the columns defined by the SQL Snippet.
+        // The Windows will be sized to the given width and height. and if checked will be wrapped in a ScrollViewer.
+        // The resulting XAML can be easily copied and pasted your code
         [HttpGet]
         [Route("GetXAMLFormDefinitionForSQLResultInAWindow")]
         [SwaggerOperation(Summary =
@@ -2309,10 +2323,26 @@ namespace CodeGenAPI.Controllers
             return result;
         }
         
+        [HttpPost]
+        [Route("MakeSQLUglyFromPostPretty")]
+        [SwaggerOperation(Summary = "Will Return a pretty SQL stanza for a supplied UGLY SQL Code Snippet. As the LOng SQL is taken from the body in a POST its much less subject to content length restrictions. Thus is usable for BIG stuff")]
+        public string MakeSQLUglyFromPostPretty([FromBody] AreallyLongString longBaby)
+        {
+            string result = "";
+
+            SQL_Formatter.Formatter formatter = new SQL_Formatter.Formatter();
+
+            string opts = "LeadingCommas=False;LeadingJoins=True;RemoveComments=False";
+
+            result = formatter.Format(longBaby.TheString, opts);
+           
+            return result;
+        }
+        
         [HttpGet]
         [Route("GetCreateScript")]
         [SwaggerOperation(Summary =
-            "Will Return a SQL Script that will create the table or a view in the database ")]
+            "Will Return a SQL Script that will recreate the table or a view in the database ")]
         public string GetCreateScript(string CN = "DBwSSPI_Login", string TNAME = "MemberMain", bool ScriptIndexes = true)
         {
             string result = "";
@@ -4389,6 +4419,17 @@ namespace CodeGenAPI.Controllers
     {
         public string TableName { get; set; } = "";
         public string PKName { get; set; } = "";
+    }
+    
+    public class AreallyLongString
+    {
+        public string TheString { get; set; } = "";
+    }
+    
+    public class SqlQueryModel 
+    {
+        public string CN { get; set; }
+        public string SQLCode { get; set; }
     }
     
     public class PlainTextModelBinder : IModelBinder
