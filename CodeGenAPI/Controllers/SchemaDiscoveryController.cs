@@ -2415,7 +2415,71 @@ namespace CodeGenAPI.Controllers
             
             //return result;
         }
-        
+
+        [HttpGet]
+        [Route("GetWinFormsStuff")]
+        [SwaggerOperation(Summary =
+            "Will generate a series of code snippets that can be pasted into a Windows Forms definition for the UI CRUD")]
+        public string GetWinFormsStuff(string CN = "DBwSSPI_Login", string SQLCode = "Select top 1 * from SOMETABLE",
+            string WindowTitle = "Window Title Goes Here", string WindowWidth = "800", string WindowHeight = "500",
+            string WindowClassName = "MyWindowClassName", string WindowNameSpace = "MyWindowNameSpace", string DBOClassName = "MyDBOObject")
+        {
+            string result = "";
+
+            TheFields = (List<Field>)GetSchemaFieldsFromSQLCode(CN, SQLCode);
+
+            // here we will Coerse the fields a bit
+            foreach (Field f in TheFields)
+            {
+                f.FieldNameConverted = f.FieldName;
+
+                if (f.FieldType.ToUpper().Contains(".STRING"))
+                    f.FieldType = "VARCHAR";
+                
+                if (f.FieldType.ToUpper().Contains(".INT"))
+                    f.FieldType = "INT";
+                
+                if (f.FieldType.ToUpper().Contains(".DATE"))
+                    f.FieldType = "DATETIME";
+                
+                if (f.FieldType.ToUpper().Contains(".BOOL"))
+                    f.FieldType = "BOOL";
+                
+                if (f.FieldType.ToUpper().Contains(".DOUB"))
+                    f.FieldType = "DOUBLE";
+                
+                if (f.FieldType.ToUpper().Contains(".FLOA"))
+                    f.FieldType = "FLOAT";
+            }
+            
+            result += "//\n";
+            result += "// This bit of code goes where your models are... \n";
+            result += "//\n\n";
+
+            result += GetInterfaceClassFromSQLCode(CN, SQLCode, DBOClassName);
+
+            TableName = DBOClassName;
+            
+            result += "//\n";
+            result += "// These methods will go into the form code itself\n";
+            result += "//\n\n";
+            result += GenerateSupportRoutines();
+            
+            result += GeneratePacker();
+            result += GenerateUnPacker();
+
+            result += GenerateButtonHandlers();
+            
+            
+            
+            result += "//\n";
+            result += "// Replace the InitializeComponent in the code behind with this \n";
+            result += "//\n\n";
+
+            result += GenerateWinFormsInitializeComponent();
+            
+            return result;
+        }
         
         #region Private Stuff
 
