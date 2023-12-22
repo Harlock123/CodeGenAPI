@@ -1,6 +1,10 @@
 ﻿using System;
 namespace CodeGenAPI.Models
 {
+    /// <summary>
+    /// The Field class is used to store the field information for a table
+    /// used in the CodeGenAPI are source for most of its work
+    /// </summary>
     public class Field
     {
         public bool AllowNulls { get; set; } = false;

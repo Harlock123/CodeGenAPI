@@ -2305,7 +2305,11 @@ namespace CodeGenAPI.Controllers
             return Preample + xaml.ToString() + "\n" + Postamble;
         }
 
-        
+
+        /// <summary>
+        /// Returns a formatted SQL stanza for a given UGLY SQL code snippet.
+        /// This method is highly subject to content length restrictions and is not recommended for large SQL queries. </summary> <param name="UGLYSQL">The UGLY SQL code snippet to be formatted.</param> <returns>
+        /// <returns> The formatted SQL stanza. </returns>
         [HttpGet]
         [Route("MakeSQLUglyPretty")]
         [SwaggerOperation(Summary =
@@ -2322,7 +2326,14 @@ namespace CodeGenAPI.Controllers
            
             return result;
         }
-        
+
+        /// <summary>
+        /// Converts a ugly SQL code snippet to an formatted Pretty SQL code snippet.
+        /// The source SQL code snippet is passed in the body of the POST request.
+        /// bypassing the content length restrictions of a GET request.
+        /// </summary>
+        /// <param name="longBaby">The ugly SQL code snippet to convert.</param>
+        /// <returns>The converted formatted SQL code snippet.</returns>
         [HttpPost]
         [Route("MakeSQLUglyFromPostPretty")]
         [SwaggerOperation(Summary = "Will Return a pretty SQL stanza for a supplied UGLY SQL Code Snippet. As the LOng SQL is taken from the body in a POST its much less subject to content length restrictions. Thus is usable for BIG stuff")]
@@ -2338,7 +2349,14 @@ namespace CodeGenAPI.Controllers
            
             return result;
         }
-        
+
+        /// <summary>
+        /// Get the SQL script that can recreate a table or view in the database.
+        /// </summary>
+        /// <param name="CN">The connection string for the database. Default value is "DBwSSPI_Login".</param>
+        /// <param name="TNAME">The name of the table or view to create the script for. Default value is "MemberMain".</param>
+        /// <param name="ScriptIndexes">Specify whether to include indexes in the script. Default value is true.</param>
+        /// <returns>The SQL script as a string. If the table or view does not exist, it returns an error message.</returns>
         [HttpGet]
         [Route("GetCreateScript")]
         [SwaggerOperation(Summary =
@@ -2416,6 +2434,18 @@ namespace CodeGenAPI.Controllers
             //return result;
         }
 
+        /// <summary>
+        /// Retrieves a series of code snippets that can be pasted into a Windows Forms definition for the UI CRUD.
+        /// </summary>
+        /// <param name="CN">The connection string for the database.</param>
+        /// <param name="SQLCode">The SQL code that retrieves data from the database.</param>
+        /// <param name="WindowTitle">The title of the window in the Windows Forms application.</param>
+        /// <param name="WindowWidth">The width of the window in pixels.</param>
+        /// <param name="WindowHeight">The height of the window in pixels.</param>
+        /// <param name="WindowClassName">The class name of the window.</param>
+        /// <param name="WindowNameSpace">The namespace of the window.</param>
+        /// <param name="DBOClassName">The class name for the database object.</param>
+        /// <returns>The generated code snippets for the Windows Forms application.</returns>
         [HttpGet]
         [Route("GetWinFormsStuff")]
         [SwaggerOperation(Summary =
@@ -2483,6 +2513,13 @@ namespace CodeGenAPI.Controllers
         
         #region Private Stuff
 
+        /// <summary>
+        /// Generates the table model class for a database table.
+        /// </summary>
+        /// <param name="CN">The connection string name.</param>
+        /// <param name="TN">The table name.</param>
+        /// <param name="CNAME">The class name.</param>
+        /// <returns>The generated table model class.</returns>
         private string GetTableModelForPost(
             string CN = "DBwSSPI_Login",
             string TN = "MemberMain",
@@ -3031,6 +3068,17 @@ namespace CodeGenAPI.Controllers
             return DoTheIndentation(result);
         }
 
+        /// <summary>
+        /// Fetches an actual connection string based on the provided key.
+        /// </summary>
+        /// <param name="TheKey">The key used to look up the connection string.</param>
+        /// <returns>
+        /// The supplied key is first checked to see if its likely an actual connection string.
+        /// If so itself is returned. Otherwise, the key is used to look up the actual connection
+        /// in the appsettings.json file. If a match is found, the actual connection string is
+        /// pulled from the appsettings.json file and returned. If no match is found, an empty
+        /// string is returned.
+        /// </returns>
         private string FetchActualConnectionString(string TheKey)
         {
             if (TheKey.Trim().ToUpper().StartsWith("SERVER"))
@@ -3065,6 +3113,11 @@ namespace CodeGenAPI.Controllers
             return result.ToString();
         }
 
+        /// <summary>
+        /// Performs indentation for a given code string.
+        /// </summary>
+        /// <param name="code">The code string to be indented.</param>
+        /// <returns>The indented code string.</returns>
         private string DoTheIndentation(string code)
         {
             StringBuilder sb = new StringBuilder();
@@ -3112,6 +3165,11 @@ namespace CodeGenAPI.Controllers
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Creates a string consisting of multiple tab characters for indentation.
+        /// </summary>
+        /// <param name="indent">The number of tab characters to generate.</param>
+        /// <returns>A string consisting of the specified number of tab characters.</returns>
         private string INDENT(int indent)
         {
             string s = "";
@@ -3125,6 +3183,10 @@ namespace CodeGenAPI.Controllers
 
         }
 
+        /// <summary>
+        /// This method generates private methods for inserting or updating data into a database table.
+        /// </summary>
+        /// <returns>A string representing the C# code generated private methods.</returns>
         private string GeneratePrivateMethods()
         {
             string s = "";
@@ -3511,6 +3573,11 @@ namespace CodeGenAPI.Controllers
             return s;
         }
 
+        /// <summary>
+        /// Inserts the specified number of tabs into a string.
+        /// </summary>
+        /// <param name="numtabs">The number of tabs to insert.</param>
+        /// <returns>A string with the specified number of tabs.</returns>
         private string Tabify(int numtabs)
         {
             string result = "";
@@ -3524,6 +3591,15 @@ namespace CodeGenAPI.Controllers
             return result;
         }
 
+        /// <summary>
+        /// Takes a string and an integer count as input and returns a string representation
+        /// of the string with each line surrounded by quotes and concatenated by a plus sign.
+        /// </summary>
+        /// <param name="TheString">The string to be converted.</param>
+        /// <param name="tcount">The integer count indicating the number of tabs to be added at the beginning of each line, except the first line.</param>
+        /// <returns>
+        /// A string representation of the input string with each line surrounded by quotes and concatenated by a plus sign.
+        /// </returns>
         private string Stringify(string TheString, int tcount)
         {
             string[] arr = TheString.Split("\n\r".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
@@ -4473,31 +4549,48 @@ namespace CodeGenAPI.Controllers
         #endregion
     }
 
+    /// <summary>
+    /// Will be used to pass a list of tables and their primary keys in the API
+    /// </summary>
     public class TablesAndPKs
     {
         public string TableName { get; set; } = "";
         public string PKName { get; set; } = "";
     }
 
+    /// <summary>
+    /// Will be used to pass a list of tables and their other key fields keys in the API
+    /// </summary>
     public class OtherTableKeys
     {
         public string TableName { get; set; } = "";
         public string PKName { get; set; } = "";
     }
     
+    /// <summary>
+    /// This is a class that is used to pass a string to the API
+    /// </summary>
     public class AreallyLongString
     {
         public string TheString { get; set; } = "";
     }
     
+    /// <summary>
+    /// Unused ATM
+    /// </summary>
     public class SqlQueryModel 
     {
         public string CN { get; set; }
         public string SQLCode { get; set; }
     }
     
+    /// <summary>
+    /// Used in connecting Posted JSON in the BODY of a request to Variables for consumption
+    /// Does so Asynchronously
+    /// </summary>
     public class PlainTextModelBinder : IModelBinder
     {
+        
         public Task BindModelAsync(ModelBindingContext bindingContext)
         {
             if (bindingContext == null)
