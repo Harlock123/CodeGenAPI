@@ -21,6 +21,8 @@ namespace CodeGenAPI.Models
         public string CROSSWALKDISPLAY { get; set; } = "";
         public string TABLENAME { get; set; } = "";
 
+        public bool IsMultiple { get; set; } = false; // This is used to determine if the field is a multiple field
+
         public Field()
         {
 
@@ -41,9 +43,11 @@ namespace CodeGenAPI.Models
             CROSSWALKVALUE = "";
             CROSSWALKDISPLAY = "";
             TABLENAME = "";
+            IsMultiple = false;
         }
 
-        public Field(string fname, string ftype, int maxlen, bool nulls, bool identity, int precision, int scale, bool crw, string crt, string crv, string crd, string tname )
+        public Field(string fname, string ftype, int maxlen, bool nulls, bool identity, 
+            int precision, int scale, bool crw, string crt, string crv, string crd, string tname, bool isMult )
         {
             FieldName = fname;
             FieldNameConverted = fname.Replace(" ", "_");
@@ -58,6 +62,7 @@ namespace CodeGenAPI.Models
             CROSSWALKVALUE = crv;
             CROSSWALKDISPLAY = crd;
             TABLENAME = tname;
+            IsMultiple = isMult;
         }
 
     }

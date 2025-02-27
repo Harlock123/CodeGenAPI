@@ -193,14 +193,14 @@ namespace CodeGenAPI.Controllers
 
             cn.Open();
 
-            var sqlstring = "select A.*," +
+            var sqlstring = "select DISTINCT A.*," +
                             "B.TABLE_TYPE," +
                             "(SELECT OBJECT_ID(A.TABLE_NAME)) as TABLEID," +
                             "(SELECT IS_IDENTITY FROM SYS.columns SC WHERE SC.object_id = (SELECT OBJECT_ID(A.TABLE_NAME)) AND SC.NAME = A.COLUMN_NAME  ) as IS_IDENTITY " +
                             "from INFORMATION_SCHEMA.COLUMNS as A " +
                             "LEFT OUTER JOIN " +
                             "INFORMATION_SCHEMA.TABLES B on A.TABLE_NAME = B.TABLE_NAME " +
-                            "WHERE A.TABLE_NAME = @TABLENAME " +
+                            "WHERE A.TABLE_NAME = @TABLENAME AND A.TABLE_SCHEMA = 'dbo' " +
                             "ORDER BY A.TABLE_NAME,A.ORDINAL_POSITION";
 
 
@@ -242,14 +242,14 @@ namespace CodeGenAPI.Controllers
 
                 cn.Open();
 
-                var sqlstring = "select A.*," +
+                var sqlstring = "select DISTINCT A.*," +
                                 "B.TABLE_TYPE," +
                                 "(SELECT OBJECT_ID(A.TABLE_NAME)) as TABLEID," +
                                 "(SELECT IS_IDENTITY FROM SYS.columns SC WHERE SC.object_id = (SELECT OBJECT_ID(A.TABLE_NAME)) AND SC.NAME = A.COLUMN_NAME  ) as IS_IDENTITY " +
                                 "from INFORMATION_SCHEMA.COLUMNS as A " +
                                 "LEFT OUTER JOIN " +
                                 "INFORMATION_SCHEMA.TABLES B on A.TABLE_NAME = B.TABLE_NAME " +
-                                "WHERE A.TABLE_NAME = @TABLENAME " +
+                                "WHERE A.TABLE_NAME = @TABLENAME AND A.TABLE_SCHEMA = 'dbo' " +
                                 "ORDER BY A.TABLE_NAME,A.ORDINAL_POSITION";
 
 
@@ -990,22 +990,28 @@ namespace CodeGenAPI.Controllers
             DataSet ds = new DataSet();
             ad.FillSchema(ds, SchemaType.Mapped);
 
-            var metadata = ds.Tables[0];
-
-            foreach (DataColumn col in metadata.Columns)
+            for (int i = 0; i < ds.Tables.Count; i++)
             {
-                Field f = new Field();
 
-                f.AllowNulls = col.AllowDBNull;
-                f.FieldName = col.ColumnName;
-                f.FieldType = col.DataType.ToString();
-                f.IsIdentity = col.AutoIncrement;
-                f.MaxLength = col.MaxLength;
-                f.Precision = 0;
-                
-                result.Add(f); 
+                var metadata = ds.Tables[i];
+
+                foreach (DataColumn col in metadata.Columns)
+                {
+                    Field f = new Field();
+
+                    f.AllowNulls = col.AllowDBNull;
+                    f.FieldName = col.ColumnName;
+                    f.FieldType = col.DataType.ToString();
+                    f.IsIdentity = col.AutoIncrement;
+                    f.MaxLength = col.MaxLength;
+                    f.Precision = 0;
+                    f.TABLENAME = ds.Tables[i].TableName;
+                    
+
+                    result.Add(f);
 
 
+                }
             }
 
             ds.Dispose();
@@ -1013,6 +1019,47 @@ namespace CodeGenAPI.Controllers
             cmd.Dispose();
             cn.Close();
             cn.Dispose();
+
+            SqlConnection conn = new SqlConnection(CN);
+            conn.Open();
+
+            cmd = new SqlCommand(SQLCode, conn);
+
+            string TableName = "Table";
+            string RESTableName = TableName;
+            
+            List<string> Thelist = new List<string>();
+            using (SqlDataReader reader = cmd.ExecuteReader())
+            {
+                int resultindex = 0;
+                do
+                {
+                    DataTable dt = new DataTable();
+                    dt.Load(reader);
+                    
+                    //Thelist.Add("Results Index " + resultindex.ToString());
+
+                    if (dt.Rows.Count > 1)
+                    {
+                        foreach (Field f in result)
+                        {
+                            if (f.TABLENAME.ToLower() == RESTableName.ToLower())
+                            {
+                                f.IsMultiple = true;
+                            }
+                        }
+                    }
+
+                    resultindex += 1;
+
+                    RESTableName = TableName + resultindex.ToString().Trim();
+                        
+                }
+                while (!reader.IsClosed && reader.Read()); // Move to the next result set 
+            }
+            cmd.Dispose();
+            conn.Close();
+            conn.Dispose();
 
             return result;
         }
@@ -1097,7 +1144,7 @@ namespace CodeGenAPI.Controllers
         ///</Summary>
         [HttpGet]
         [Route("GetAllTablesInterfaceClassesFromDataBase")]
-        [SwaggerOperation(Summary = "Will retrieve Lightweight Data Object classes for each table and View in the target database")]
+        [SwaggerOperation(Summary = "Will retrieve Lightweight Data Object classes for each table and View in the target database. NOTE: This is a LONG running process so use it with Caution")]
         public string GetAllTablesInterfaceClassesFromDataBase(
             string CN = "DBwSSPI_Login")
         {
@@ -1932,6 +1979,7 @@ namespace CodeGenAPI.Controllers
             thestring += "                        and ic.index_id = pk.index_id ";
             thestring += "                            order by col.column_id ";
             thestring += "                            for xml path ('') ) D (column_names) ";
+            thestring += "Where schema_name(tab.schema_id) = 'dbo' ";
             thestring += "order by schema_name(tab.schema_id), ";
             thestring += "    pk.[name]";
 
@@ -2510,7 +2558,32 @@ namespace CodeGenAPI.Controllers
             
             return result;
         }
-        
+
+
+        /// <summary> Takes a Delimited List of Method Names and Generates a set of Method Stubs for a Class </summary> 
+        /// <param name="MethodNames">A Delimited List of Method Names</param> <returns> A set of Method Stubs for a Class </returns>
+        [HttpPost]
+        [Route("GetMethodsFromNamesSupplied")]
+        [SwaggerOperation(Summary =
+          "Will generate a series of code snippets stubs for each methodname in the supplied delimited list")]
+        public string GetMethodsFromNamesSupplied([FromBody]string MethodNames = "Strings each on their own line")
+        {
+            string result = "";
+
+            string[] methods = MethodNames.Split(',');
+
+            foreach (string method in methods)
+            {
+                result += "public void " + method + "()\n";
+                result += "{\n\n";
+                result += "\n\n";
+                result += "}\n\n";
+            }
+
+            return result;
+        }
+
+
         #region Private Stuff
 
         /// <summary>
